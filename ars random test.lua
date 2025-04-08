@@ -1,98 +1,73 @@
--- 👾 Danh sách kẻ địch cần theo dõi
+-- Danh sách tên kẻ địch
 local enemyNames = {
-    "Gonshee",
-    "longIn",
-    "Largalgan",
-    "daek",
-    "anders",
-    "Soondoo"
+    "Gonshee", "longIn", "Largalgan", "daek", "anders", "Soondoo"
 }
 
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
-
+local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
-local playerGui = player:WaitForChild("PlayerGui")
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+local currentEnemy = nil
+local selectedEnemyName = enemyNames[1] -- Mặc định là enemy đầu tiên trong danh sách
 
-local gui = Instance.new("ScreenGui")
-gui.Name = "EnemyTrackerGUI"
-gui.ResetOnSpawn = false
-gui.Parent = playerGui
+-- UI Dropdown
+local ScreenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+ScreenGui.Name = "EnemyDropdownGui"
 
--- Dropdown menu
 local dropdown = Instance.new("TextButton")
-dropdown.Size = UDim2.new(0, 200, 0, 50)
-dropdown.Position = UDim2.new(0, 20, 0, 100)
-dropdown.Text = "Chọn enemy"
-dropdown.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+dropdown.Size = UDim2.new(0, 200, 0, 40)
+dropdown.Position = UDim2.new(0, 10, 0, 100)
+dropdown.Text = "Chọn kẻ địch"
+dropdown.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 dropdown.TextColor3 = Color3.new(1, 1, 1)
-dropdown.Parent = gui
+dropdown.Parent = ScreenGui
+
+local listFrame = Instance.new("Frame")
+listFrame.Size = UDim2.new(0, 200, 0, #enemyNames * 30)
+listFrame.Position = UDim2.new(0, 10, 0, 140)
+listFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+listFrame.Visible = false
+listFrame.Parent = ScreenGui
+
+for i, name in ipairs(enemyNames) do
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 30)
+    btn.Position = UDim2.new(0, 0, 0, (i - 1) * 30)
+    btn.Text = name
+    btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Parent = listFrame
+
+    btn.MouseButton1Click:Connect(function()
+        selectedEnemyName = name
+        dropdown.Text = "Đã chọn: " .. name
+        listFrame.Visible = false
+        currentEnemy = nil -- reset khi chọn enemy khác
+    end)
+end
 
 dropdown.MouseButton1Click:Connect(function()
-    for _, child in pairs(gui:GetChildren()) do
-        if child:IsA("TextButton") and child.Name == "Option" then
-            child:Destroy()
-        end
-    end
-
-    for i, name in ipairs(enemyNames) do
-        local option = Instance.new("TextButton")
-        option.Name = "Option"
-        option.Size = UDim2.new(0, 200, 0, 30)
-        option.Position = UDim2.new(0, 20, 0, 100 + i * 35)
-        option.Text = name
-        option.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-        option.TextColor3 = Color3.new(1, 1, 1)
-        option.Parent = gui
-
-        option.MouseButton1Click:Connect(function()
-            dropdown.Text = name
-        end)
-    end
+    listFrame.Visible = not listFrame.Visible
 end)
 
--- Toggle button
-local toggle = Instance.new("TextButton")
-toggle.Size = UDim2.new(0, 200, 0, 50)
-toggle.Position = UDim2.new(0, 20, 0, 320)
-toggle.Text = "Tự động dịch chuyển: OFF"
-toggle.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
-toggle.TextColor3 = Color3.new(1, 1, 1)
-toggle.Parent = gui
-
-local autoTeleport = false
-local lastTarget = nil
-
-toggle.MouseButton1Click:Connect(function()
-    autoTeleport = not autoTeleport
-    toggle.Text = "Tự động dịch chuyển: " .. (autoTeleport and "ON" or "OFF")
-    toggle.BackgroundColor3 = autoTeleport and Color3.fromRGB(0, 100, 0) or Color3.fromRGB(100, 0, 0)
-end)
-
--- Hàm tìm enemy gần nhất theo tên
+-- Hàm tìm kẻ địch gần nhất
 local function getNearestEnemyByName(name)
-    local enemiesFolder = workspace:FindFirstChild("__Main")
-    if not enemiesFolder then return nil end
-    enemiesFolder = enemiesFolder:FindFirstChild("__Enemies")
-    if not enemiesFolder then return nil end
-    local clientFolder = enemiesFolder:FindFirstChild("Client")
-    if not clientFolder then return nil end
-
-    local closest, minDist = nil, math.huge
-    for _, enemy in pairs(clientFolder:GetChildren()) do
+    local closest = nil
+    local minDist = math.huge
+    for _, enemy in pairs(workspace.__Main.__Enemies.Client:GetChildren()) do
         local title = enemy:FindFirstChild("HealthBar")
             and enemy.HealthBar:FindFirstChild("Main")
             and enemy.HealthBar.Main:FindFirstChild("Title")
 
-        if title and title:IsA("TextLabel") and title.Text:lower() == name:lower() then
-            local root = enemy:FindFirstChild("HumanoidRootPart")
-            if root then
-                local dist = (root.Position - character.HumanoidRootPart.Position).Magnitude
+        if title and title:IsA("TextLabel") and title.Text == name then
+            local head = enemy:FindFirstChild("Head")
+            if head then
+                local dist = (head.Position - humanoidRootPart.Position).Magnitude
                 if dist < minDist then
                     minDist = dist
-                    closest = root
+                    closest = enemy
                 end
             end
         end
@@ -100,27 +75,29 @@ local function getNearestEnemyByName(name)
     return closest
 end
 
--- Tự động tween đến enemy gần nhất
-RunService.RenderStepped:Connect(function()
-    if autoTeleport and dropdown.Text ~= "Chọn enemy" then
-        if lastTarget and lastTarget.Parent == nil then
-            lastTarget = nil -- Enemy cũ đã biến mất
-        end
+-- Theo dõi enemy
+RunService.Heartbeat:Connect(function()
+    if not currentEnemy or not currentEnemy:FindFirstChild("Head") or not currentEnemy:FindFirstChild("HealthBar") then
+        currentEnemy = getNearestEnemyByName(selectedEnemyName)
+    end
 
-        if not lastTarget then
-            local target = getNearestEnemyByName(dropdown.Text)
-            if target then
-                local hrp = character:FindFirstChild("HumanoidRootPart")
-                if hrp then
-                    local tween = TweenService:Create(
-                        hrp,
-                        TweenInfo.new(1, Enum.EasingStyle.Linear),
-                        {CFrame = target.CFrame + Vector3.new(0, 5, 0)}
-                    )
-                    tween:Play()
-                    lastTarget = target
-                end
+    if currentEnemy then
+        local head = currentEnemy:FindFirstChild("Head")
+        local amount = currentEnemy.HealthBar.Main.Bar:FindFirstChild("Amount")
+
+        if head and amount and amount:IsA("TextLabel") then
+            local hp = tonumber(amount.Text) or 0
+            print("🧠 HP:", hp)
+
+            if hp <= 0 then
+                currentEnemy = getNearestEnemyByName(selectedEnemyName)
+                return
             end
+
+            -- Tween nhân vật tới head
+            local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Linear)
+            local goal = {CFrame = head.CFrame * CFrame.new(0, 2, 0)}
+            TweenService:Create(humanoidRootPart, tweenInfo, goal):Play()
         end
     end
 end)
