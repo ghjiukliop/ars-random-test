@@ -33,7 +33,14 @@ dropdown.Font = Enum.Font.SourceSansBold
 dropdown.TextSize = 16
 
 dropdown.MouseButton1Click:Connect(function()
+    -- Xóa menu cũ nếu tồn tại
+    local existingMenu = gui:FindFirstChild("DropdownMenu")
+    if existingMenu then
+        existingMenu:Destroy()
+    end
+
     local menu = Instance.new("Frame", gui)
+    menu.Name = "DropdownMenu"  -- Đặt tên cho menu để dễ dàng tìm kiếm sau này
     menu.Size = UDim2.new(0, 180, 0, #weaponTypes * 30)
     menu.Position = UDim2.new(0, 20, 0, 140)
     menu.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
@@ -112,3 +119,4 @@ RunService.Heartbeat:Connect(function()
         wait(0.3)
     end
 end)
+
