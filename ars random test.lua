@@ -3,9 +3,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local remote = ReplicatedStorage.BridgeNet2.dataRemoteEvent
 local weaponFolder = player.leaderstats.Inventory.Weapons
 
-local selectedType = "SpikeMace" -- đổi tên này nếu muốn nâng vũ khí khác
+local selectedType = "SpikeMace" -- Loại vũ khí
+local upgradeLevel = 2            -- Mức cấp độ muốn nâng (có thể thay đổi)
 
--- Hàm lấy mọi vũ khí có tên bắt đầu bằng "SpikeMace"
+-- Lấy tất cả SpikeMace hiện có trong kho
 local function getWeaponList()
     local list = {}
     for _, item in ipairs(weaponFolder:GetChildren()) do
@@ -16,8 +17,8 @@ local function getWeaponList()
     return list
 end
 
--- Gửi yêu cầu upgrade
-local function upgrade(weapons, level)
+-- Gửi yêu cầu nâng cấp
+local function upgrade(weapons)
     local args = {
         [1] = {
             [1] = {
@@ -25,28 +26,27 @@ local function upgrade(weapons, level)
                 ["BuyType"] = "Gems",
                 ["Weapons"] = weapons,
                 ["Event"] = "UpgradeWeapon",
-                ["Level"] = level
+                ["Level"] = upgradeLevel
             },
             [2] = "\n"
         }
     }
     remote:FireServer(unpack(args))
-    print("🔥 Upgrade " .. selectedType .. " to level " .. level .. " with: ", weapons[1], weapons[2], weapons[3])
+    print("🔥 Đã nâng 3 cây " .. selectedType .. " lên cấp " .. upgradeLevel)
 end
 
--- Main loop: từ level 2 đến 10, mỗi cấp upgrade 15 lần nếu đủ
+-- Thực hiện nâng cấp từng nhóm 3 cây một
 task.spawn(function()
-    for level = 2, 9 do
-        for i = 1, 15 do
-            local all = getWeaponList()
-            if #all >= 3 then
-                local chosen = {all[1], all[2], all[3]}
-                upgrade(chosen, level)
-                task.wait(0.3)
-            else
-                print("❗ Không đủ vũ khí để nâng cấp ở level " .. level)
-                break
-            end
-        end
+    local list = getWeaponList()
+    while #list >= 3 do
+        local group = {list[1], list[2], list[3]}
+        upgrade(group)
+        task.wait(0.3)
+
+        -- Xoá 3 cây đã dùng để tránh dùng lại
+        table.remove(list, 1)
+        table.remove(list, 1)
+        table.remove(list, 1)
     end
+    print("✅ Đã nâng cấp xong tất cả nhóm 3 cây có thể.")
 end)
