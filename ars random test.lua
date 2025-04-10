@@ -1,14 +1,13 @@
--- Weapon Upgrade UI and Logic Script (Final Version)
+-- Auto Upgrade UI + Khởi tạo biến
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-
 local player = Players.LocalPlayer
-local weaponFolder = player:WaitForChild("leaderstats"):WaitForChild("Inventory"):WaitForChild("Weapons")
 local remote = ReplicatedStorage.BridgeNet2.dataRemoteEvent
+local weaponFolder = player:WaitForChild("leaderstats"):WaitForChild("Inventory"):WaitForChild("Weapons")
 
--- Danh sách weapon theo tên console
+-- Danh sách weapon theo tên code
 local weaponTypes = {
     SpikeMace = "Spike Maul",
     DualKando = "Twin Kando Blade",
@@ -21,7 +20,7 @@ local weaponTypes = {
 local selectedWeapon = nil
 local upgrading = false
 
--- GUI tạo dropdown và nút bật
+-- GUI
 local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 gui.Name = "AutoUpgradeGUI"
 gui.ResetOnSpawn = false
@@ -36,7 +35,7 @@ dropdown.TextColor3 = Color3.new(1, 1, 1)
 dropdown.Font = Enum.Font.SourceSansBold
 dropdown.TextSize = 16
 
--- Toggle auto-upgrade
+-- Toggle Auto Upgrade
 local toggle = Instance.new("TextButton", gui)
 toggle.Size = UDim2.new(0, 180, 0, 30)
 toggle.Position = UDim2.new(0, 20, 0, 70)
@@ -91,43 +90,55 @@ dropdown.MouseButton1Click:Connect(function()
     end
 end)
 
--- Hàm gửi yêu cầu nâng cấp (không cần Level)
-local function tryUpgrade(typeName, ids)
+-- Lấy danh sách vũ khí theo loại và level
+local function getWeaponsByLevel(typeName, level)
+    local found = {}
+    for _, item in ipairs(weaponFolder:GetChildren()) do
+        if item:IsA("Folder") and item.Name:match("^" .. typeName) then
+            local lvl = item:FindFirstChild("Level")
+            if lvl and tonumber(lvl.Value) == level then
+                table.insert(found, item.Name)
+            end
+        end
+    end
+    return found
+end
+
+-- Gửi lệnh upgrade
+local function tryUpgrade(typeName, ids, level)
     local args = {
         [1] = {
             [1] = {
                 ["Type"] = typeName,
                 ["BuyType"] = "Gems",
                 ["Weapons"] = ids,
-                ["Event"] = "UpgradeWeapon"
+                ["Event"] = "UpgradeWeapon",
+                ["Level"] = level
             },
-            [2] = "\n"
+            [2] = "\\n"
         }
     }
     remote:FireServer(unpack(args))
-    print("🔼 Upgraded: " .. ids[1] .. ", " .. ids[2] .. ", " .. ids[3])
+    print("Upgraded " .. typeName .. " from Level " .. level .. " to Level " .. (level + 1))
 end
 
--- Lấy danh sách vũ khí theo tên
-local function getWeaponIdsByType(typename)
-    local found = {}
-    for _, item in ipairs(weaponFolder:GetChildren()) do
-        if typeof(item) == "Instance" and item:IsA("Folder") and item.Name:match("^" .. typename) then
-            table.insert(found, item.Name)
+-- Tự động upgrade từ Level 2 -> 10, mỗi cấp nâng 15 lần nếu đủ
+task.spawn(function()
+    while true do
+        if upgrading and selectedWeapon then
+            for level = 2, 9 do -- từ level 2 đến 9 (nâng lên tối đa 10)
+                for i = 1, 15 do
+                    local weapons = getWeaponsByLevel(selectedWeapon, level)
+                    if #weapons >= 3 then
+                        local batch = {weapons[1], weapons[2], weapons[3]}
+                        tryUpgrade(selectedWeapon, batch, level)
+                        task.wait(0.3)
+                    else
+                        break -- nếu không đủ 3 thì thoát vòng
+                    end
+                end
+            end
         end
-    end
-    return found
-end
-
--- Vòng lặp nâng cấp liên tục mỗi khi đủ 3 vũ khí cùng tên
-RunService.Heartbeat:Connect(function()
-    if not upgrading or not selectedWeapon then return end
-
-    local weaponIds = getWeaponIdsByType(selectedWeapon)
-    while #weaponIds >= 3 do
-        local using = {weaponIds[1], weaponIds[2], weaponIds[3]}
-        tryUpgrade(selectedWeapon, using)
-        wait(0.3)
-        weaponIds = getWeaponIdsByType(selectedWeapon)
+        task.wait(1)
     end
 end)
