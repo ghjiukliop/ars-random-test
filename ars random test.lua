@@ -8,7 +8,7 @@ local upgradeLevel = 2
 local upgrading = false
 local blacklist = {}
 
--- Giao diện nút bật/tắt
+-- Tạo GUI bật/tắt nâng cấp
 local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 gui.Name = "UpgradeToggleGui"
 
@@ -27,7 +27,7 @@ toggleBtn.MouseButton1Click:Connect(function()
     toggleBtn.BackgroundColor3 = upgrading and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(150, 50, 50)
 end)
 
--- Blacklist logic
+-- Blacklist check
 local function isBlacklisted(name)
     for _, v in ipairs(blacklist) do
         if v == name then return true end
@@ -35,20 +35,27 @@ local function isBlacklisted(name)
     return false
 end
 
--- Lấy danh sách SpikeMace theo yêu cầu
-local function getWeaponList(includeBlacklist)
-    local list = {}
+-- Lấy danh sách SpikeMace và sắp xếp theo mã HEX thời gian
+local function getWeaponListByTime(includeBlacklist)
+    local raw = {}
     for _, item in ipairs(weaponFolder:GetChildren()) do
         if item:IsA("Folder") and item.Name:match("^SpikeMace") then
             if includeBlacklist or not isBlacklisted(item.Name) then
-                table.insert(list, item.Name)
+                local hex = item.Name:match("^SpikeMace(%x+)")
+                local ts = tonumber(hex, 16) or 0
+                table.insert(raw, {Name = item.Name, Time = ts})
             end
         end
     end
-    return list
+    table.sort(raw, function(a, b) return a.Time < b.Time end)
+    local sorted = {}
+    for _, entry in ipairs(raw) do
+        table.insert(sorted, entry.Name)
+    end
+    return sorted
 end
 
--- Đếm vũ khí
+-- Đếm số lượng weapon hiện tại
 local function countWeapons()
     local count = 0
     for _, item in ipairs(weaponFolder:GetChildren()) do
@@ -58,8 +65,7 @@ local function countWeapons()
     end
     return count
 end
-
--- Gửi upgrade + xử lý kết quả
+-- Gửi nâng cấp và kiểm tra kết quả
 local function safeUpgrade(weapons)
     local pre = countWeapons()
     local args = {
@@ -71,11 +77,11 @@ local function safeUpgrade(weapons)
                 ["Event"] = "UpgradeWeapon",
                 ["Level"] = upgradeLevel
             },
-            [2] = "\n"
+            [2] = "\\n"
         }
     }
     remote:FireServer(unpack(args))
-    print("📤 Gửi nâng:", table.concat(weapons, ", "))
+    print("📤 Gửi nâng cấp:", table.concat(weapons, ", "))
     task.wait(0.5)
     local post = countWeapons()
     return post < pre
@@ -85,28 +91,28 @@ end
 task.spawn(function()
     while true do
         if upgrading then
-            local list = getWeaponList(false)
+            local list = getWeaponListByTime(false)
             if #list >= 3 then
                 local group = {list[1], list[2], list[3]}
                 if not safeUpgrade(group) then
                     for _, w in ipairs(group) do
                         table.insert(blacklist, w)
                     end
-                    print("❌ Thêm vào blacklist:", table.concat(group, ", "))
+                    print("❌ Thất bại. Đã thêm vào blacklist:", table.concat(group, ", "))
                 else
-                    blacklist = {} -- upgrade thành công, xóa blacklist
-                    print("✅ Thành công, reset blacklist.")
+                    blacklist = {}
+                    print("✅ Thành công. Xoá toàn bộ blacklist.")
                 end
             else
-                print("⚠️ Không đủ vũ khí chưa blacklist. Thử lại với blacklist...")
-                local retryList = getWeaponList(true)
-                if #retryList >= 3 then
-                    local group = {retryList[1], retryList[2], retryList[3]}
+                print("⚠️ Không đủ weapon chưa blacklist. Thử với blacklist...")
+                local retry = getWeaponListByTime(true)
+                if #retry >= 3 then
+                    local group = {retry[1], retry[2], retry[3]}
                     if safeUpgrade(group) then
-                        print("✅ Thành công từ blacklist! Loại khỏi blacklist.")
-                        blacklist = {} -- reset lại vì đã thành công
+                        print("✅ Thành công từ blacklist. Reset blacklist.")
+                        blacklist = {}
                     else
-                        print("❌ Không thành công từ blacklist. Xóa khỏi blacklist nhóm này.")
+                        print("❌ Lại thất bại. Gỡ nhóm này khỏi blacklist.")
                         for _, w in ipairs(group) do
                             for i = #blacklist, 1, -1 do
                                 if blacklist[i] == w then
@@ -117,7 +123,7 @@ task.spawn(function()
                     end
                     task.wait(0.3)
                 else
-                    print("⏸️ Không còn vũ khí nào hợp lệ. Đợi 1 giây.")
+                    print("⏸️ Hết weapon để thử. Đợi 1 giây rồi kiểm tra lại.")
                     task.wait(1)
                 end
             end
