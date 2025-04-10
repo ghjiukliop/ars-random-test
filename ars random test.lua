@@ -35,36 +35,36 @@ local function isBlacklisted(name)
     return false
 end
 
--- Lấy danh sách vũ khí chưa bị blacklist
+-- Lấy danh sách SpikeMace chưa blacklist
 local function getWeaponList()
     local list = {}
     for _, item in ipairs(weaponFolder:GetChildren()) do
-        if item:IsA("Folder") and item.Name:match("^" .. selectedType) and not isBlacklisted(item.Name) then
+        if item:IsA("Folder") and item.Name:match("^SpikeMace") and not isBlacklisted(item.Name) then
             table.insert(list, item.Name)
         end
     end
     return list
 end
 
--- Đếm tổng vũ khí hiện có
+-- Đếm vũ khí để so sánh trước/sau
 local function countWeapons()
     local count = 0
     for _, item in ipairs(weaponFolder:GetChildren()) do
-        if item:IsA("Folder") and item.Name:match("^" .. selectedType) then
+        if item:IsA("Folder") and item.Name:match("^SpikeMace") then
             count += 1
         end
     end
     return count
 end
 
--- Gửi nâng cấp và kiểm tra kết quả
+-- Gửi nâng cấp và kiểm tra hiệu quả
 local function safeUpgrade(weapons)
     local pre = countWeapons()
 
     local args = {
         [1] = {
             [1] = {
-                ["Type"] = selectedType,
+                ["Type"] = "SpikeMace",
                 ["BuyType"] = "Gems",
                 ["Weapons"] = weapons,
                 ["Event"] = "UpgradeWeapon",
@@ -75,24 +75,24 @@ local function safeUpgrade(weapons)
     }
 
     remote:FireServer(unpack(args))
-    print("📤 Gửi nâng: " .. table.concat(weapons, ", "))
+    print("📤 Gửi nâng cấp:", table.concat(weapons, ", "))
     task.wait(0.5)
 
     local post = countWeapons()
     if post < pre then
-        print("✅ Thành công! Xoá toàn bộ blacklist.")
+        print("✅ Thành công. Xoá blacklist.")
         blacklist = {}
         return true
     else
         for _, w in ipairs(weapons) do
             table.insert(blacklist, w)
         end
-        print("❌ Thất bại. Blacklist nhóm: " .. table.concat(weapons, ", "))
+        print("❌ Thất bại. Đã blacklist:", table.concat(weapons, ", "))
         return false
     end
 end
 
--- Luồng tự động nâng cấp nếu ON
+-- Vòng lặp nâng cấp
 task.spawn(function()
     while true do
         if upgrading then
@@ -102,8 +102,19 @@ task.spawn(function()
                 safeUpgrade(group)
                 task.wait(0.3)
             else
-                print("⏸️ Không còn đủ vũ khí chưa bị blacklist.")
-                task.wait(1)
+                print("⚠️ Không đủ 3 SpikeMace chưa blacklist → xoá blacklist & thử lại.")
+                blacklist = {}
+                task.wait(0.2)
+
+                local retry = getWeaponList()
+                if #retry >= 3 then
+                    local group = {retry[1], retry[2], retry[3]}
+                    safeUpgrade(group)
+                    task.wait(0.3)
+                else
+                    print("⏸️ Vẫn không đủ sau reset. Đợi 1 giây.")
+                    task.wait(1)
+                end
             end
         else
             task.wait(1)
