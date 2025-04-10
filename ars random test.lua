@@ -90,55 +90,27 @@ dropdown.MouseButton1Click:Connect(function()
     end
 end)
 
--- Lấy danh sách vũ khí theo loại và level
-local function getWeaponsByLevel(typeName, level)
-    local found = {}
-    for _, item in ipairs(weaponFolder:GetChildren()) do
-        if item:IsA("Folder") and item.Name:match("^" .. typeName) then
-            local lvl = item:FindFirstChild("Level")
-            if lvl and tonumber(lvl.Value) == level then
-                table.insert(found, item.Name)
-            end
-        end
-    end
-    return found
-end
 
--- Gửi lệnh upgrade
-local function tryUpgrade(typeName, ids, level)
-    local args = {
-        [1] = {
-            [1] = {
-                ["Type"] = typeName,
-                ["BuyType"] = "Gems",
-                ["Weapons"] = ids,
-                ["Event"] = "UpgradeWeapon",
-                ["Level"] = level
-            },
-            [2] = "\\n"
-        }
-    }
-    remote:FireServer(unpack(args))
-    print("Upgraded " .. typeName .. " from Level " .. level .. " to Level " .. (level + 1))
-end
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local backpack = player:WaitForChild("Backpack")
 
--- Tự động upgrade từ Level 2 -> 10, mỗi cấp nâng 15 lần nếu đủ
-task.spawn(function()
-    while true do
-        if upgrading and selectedWeapon then
-            for level = 2, 9 do -- từ level 2 đến 9 (nâng lên tối đa 10)
-                for i = 1, 15 do
-                    local weapons = getWeaponsByLevel(selectedWeapon, level)
-                    if #weapons >= 3 then
-                        local batch = {weapons[1], weapons[2], weapons[3]}
-                        tryUpgrade(selectedWeapon, batch, level)
-                        task.wait(0.3)
-                    else
-                        break -- nếu không đủ 3 thì thoát vòng
-                    end
-                end
-            end
+-- Kiểm tra xem Backpack có tồn tại không
+if backpack then
+    print("Thông tin của Backpack:")
+    
+    -- Duyệt qua tất cả các đối tượng trong Backpack
+    for _, item in ipairs(backpack:GetChildren()) do
+        print("Tên: " .. item.Name)
+        print("Loại: " .. item.ClassName)
+        
+        -- Nếu có thuộc tính nào bạn muốn log, bạn có thể thêm vào đây
+        if item:IsA("Tool") then
+            print("Mô tả: " .. (item:FindFirstChild("Description") and item.Description.Value or "Không có mô tả"))
         end
-        task.wait(1)
+        
+        print("----------")  -- Dòng phân cách giữa các đối tượng
     end
-end)
+else
+    print("Backpack không tồn tại.")
+end
