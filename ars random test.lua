@@ -1,4 +1,4 @@
--- Weapon Upgrade UI and Logic Script (No Level Required)
+-- Weapon Upgrade UI and Logic Script (Final Version)
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -23,6 +23,8 @@ local upgrading = false
 
 -- GUI tạo dropdown và nút bật
 local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+gui.Name = "AutoUpgradeGUI"
+gui.ResetOnSpawn = false
 
 -- Dropdown chọn weapon
 local dropdown = Instance.new("TextButton", gui)
@@ -103,6 +105,7 @@ local function tryUpgrade(typeName, ids)
         }
     }
     remote:FireServer(unpack(args))
+    print("🔼 Upgraded: " .. ids[1] .. ", " .. ids[2] .. ", " .. ids[3])
 end
 
 -- Lấy danh sách vũ khí theo tên
