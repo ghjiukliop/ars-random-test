@@ -1,4 +1,4 @@
--- Weapon Upgrade UI and Logic Script
+-- Weapon Upgrade UI and Logic Script (No Level Required)
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -89,16 +89,15 @@ dropdown.MouseButton1Click:Connect(function()
     end
 end)
 
--- Hàm gửi yêu cầu nâng cấp
-local function tryUpgrade(typeName, ids, level)
+-- Hàm gửi yêu cầu nâng cấp (không cần Level)
+local function tryUpgrade(typeName, ids)
     local args = {
         [1] = {
             [1] = {
                 ["Type"] = typeName,
                 ["BuyType"] = "Gems",
                 ["Weapons"] = ids,
-                ["Event"] = "UpgradeWeapon",
-                ["Level"] = level
+                ["Event"] = "UpgradeWeapon"
             },
             [2] = "\n"
         }
@@ -106,37 +105,26 @@ local function tryUpgrade(typeName, ids, level)
     remote:FireServer(unpack(args))
 end
 
--- Gom nhóm các weapon theo level
-local function groupWeaponsByLevel(typename)
-    local levelGroups = {}
+-- Lấy danh sách vũ khí theo tên
+local function getWeaponIdsByType(typename)
+    local found = {}
     for _, item in ipairs(weaponFolder:GetChildren()) do
-        if item:IsA("Folder") and item.Name:match("^" .. typename) then
-            local level = item:FindFirstChild("Level")
-            if level and tonumber(level.Value) then
-                local lvl = tonumber(level.Value)
-                levelGroups[lvl] = levelGroups[lvl] or {}
-                table.insert(levelGroups[lvl], item.Name)
-            end
+        if typeof(item) == "Instance" and item:IsA("Folder") and item.Name:match("^" .. typename) then
+            table.insert(found, item.Name)
         end
     end
-    return levelGroups
+    return found
 end
 
--- Vòng lặp liên tục nâng cấp theo nhóm cùng level
+-- Vòng lặp nâng cấp liên tục mỗi khi đủ 3 vũ khí cùng tên
 RunService.Heartbeat:Connect(function()
     if not upgrading or not selectedWeapon then return end
 
-    local grouped = groupWeaponsByLevel(selectedWeapon)
-    for level, weapons in pairs(grouped) do
-        while #weapons >= 3 do
-            local using = {weapons[1], weapons[2], weapons[3]}
-            tryUpgrade(selectedWeapon, using, level + 1)
-            table.remove(weapons, 1)
-            table.remove(weapons, 1)
-            table.remove(weapons, 1)
-            wait(0.3)
-            grouped = groupWeaponsByLevel(selectedWeapon)
-            weapons = grouped[level] or {}
-        end
+    local weaponIds = getWeaponIdsByType(selectedWeapon)
+    while #weaponIds >= 3 do
+        local using = {weaponIds[1], weaponIds[2], weaponIds[3]}
+        tryUpgrade(selectedWeapon, using)
+        wait(0.3)
+        weaponIds = getWeaponIdsByType(selectedWeapon)
     end
 end)
