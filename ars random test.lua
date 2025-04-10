@@ -1,32 +1,31 @@
--- Lấy đối tượng Weapon
-local weapon = workspace.__Main.__Players.ALS_Clone15:FindFirstChild("Weapon")
+-- Lấy đối tượng WyvernSlayer từ ReplicatedStorage
+local weapon = game:GetService("ReplicatedStorage").__Assets.__Weapons:FindFirstChild("WyvernSlayer")
 
--- Kiểm tra xem Weapon có tồn tại không
+-- Kiểm tra xem đối tượng có tồn tại không
 if weapon then
-    -- Hàm để log tất cả các thuộc tính của đối tượng
-    local function logProperties(obj)
-        print("Logging properties for: " .. obj.Name)
-        for _, property in pairs(obj:GetAttributes()) do
-            print("Attribute: " .. tostring(property))
-        end
-        
-        for _, child in pairs(obj:GetChildren()) do
-            print("Child: " .. child.Name)
-            logProperties(child) -- Gọi đệ quy để log các thuộc tính của con
-        end
-        
-        -- Log các thuộc tính của đối tượng
-        for _, prop in pairs(getgc()) do
-            if typeof(prop) == "Instance" and prop == obj then
-                for i, v in pairs(prop:GetAttributes()) do
-                    print("Hidden Property: " .. i .. " = " .. tostring(v))
-                end
+    print("Đối tượng WyvernSlayer đã được tìm thấy!")
+    
+    -- Log tên của đối tượng
+    print("Tên: " .. weapon.Name)
+    
+    -- Log các thuộc tính của đối tượng
+    for property, value in pairs(weapon:GetAttributes()) do
+        print("Thuộc tính: " .. property .. " = " .. tostring(value))
+    end
+    
+    -- Log các thuộc tính khác của đối tượng
+    for _, child in pairs(weapon:GetChildren()) do
+        print("Child: " .. child.Name)
+    end
+    
+    -- Log các thuộc tính ẩn (nếu có)
+    for _, prop in pairs(getgc()) do
+        if typeof(prop) == "Instance" and prop == weapon then
+            for i, v in pairs(prop:GetAttributes()) do
+                print("Hidden Property: " .. i .. " = " .. tostring(v))
             end
         end
     end
-
-    -- Gọi hàm logProperties để log thông tin
-    logProperties(weapon)
 else
-    print("Không tìm thấy Weapon trong ALS_Clone15.")
+    print("Không tìm thấy đối tượng WyvernSlayer trong ReplicatedStorage.")
 end
