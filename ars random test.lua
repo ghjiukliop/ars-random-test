@@ -63,7 +63,7 @@ task.spawn(function()
             while #list >= 3 and upgrading do
                 local group = {list[1], list[2], list[3]}
                 upgrade(group)
-                task.wait(0.1)
+                task.wait(0.01)
                 table.remove(list, 1)
                 table.remove(list, 1)
                 table.remove(list, 1)
