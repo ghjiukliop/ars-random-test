@@ -3,8 +3,28 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local remote = ReplicatedStorage.BridgeNet2.dataRemoteEvent
 local weaponFolder = player.leaderstats.Inventory.Weapons
 
-local selectedType = "SpikeMace" -- Loại vũ khí
-local upgradeLevel = 2            -- Mức cấp độ muốn nâng (có thể thay đổi)
+local selectedType = "SpikeMace"
+local upgradeLevel = 2
+local upgrading = false
+
+-- Giao diện ON/OFF
+local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+screenGui.Name = "AutoUpgradeToggle"
+
+local toggleBtn = Instance.new("TextButton", screenGui)
+toggleBtn.Size = UDim2.new(0, 180, 0, 40)
+toggleBtn.Position = UDim2.new(0, 20, 0, 100)
+toggleBtn.Text = "🔁 Auto Upgrade OFF"
+toggleBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
+toggleBtn.TextColor3 = Color3.new(1, 1, 1)
+toggleBtn.Font = Enum.Font.SourceSansBold
+toggleBtn.TextSize = 16
+
+toggleBtn.MouseButton1Click:Connect(function()
+    upgrading = not upgrading
+    toggleBtn.Text = upgrading and "🔁 Auto Upgrade ON" or "🔁 Auto Upgrade OFF"
+    toggleBtn.BackgroundColor3 = upgrading and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(150, 50, 50)
+end)
 
 -- Lấy tất cả SpikeMace hiện có trong kho
 local function getWeaponList()
@@ -17,7 +37,7 @@ local function getWeaponList()
     return list
 end
 
--- Gửi yêu cầu nâng cấp
+-- Gửi lệnh nâng cấp
 local function upgrade(weapons)
     local args = {
         [1] = {
@@ -32,21 +52,23 @@ local function upgrade(weapons)
         }
     }
     remote:FireServer(unpack(args))
-    print("🔥 Đã nâng 3 cây " .. selectedType .. " lên cấp " .. upgradeLevel)
+    print("🔥 Nâng cấp: " .. table.concat(weapons, ", "))
 end
 
--- Thực hiện nâng cấp từng nhóm 3 cây một
+-- Vòng lặp nâng từng nhóm 3 cây một nếu ON
 task.spawn(function()
-    local list = getWeaponList()
-    while #list >= 3 do
-        local group = {list[1], list[2], list[3]}
-        upgrade(group)
-        task.wait(0.3)
-
-        -- Xoá 3 cây đã dùng để tránh dùng lại
-        table.remove(list, 1)
-        table.remove(list, 1)
-        table.remove(list, 1)
+    while true do
+        if upgrading then
+            local list = getWeaponList()
+            while #list >= 3 and upgrading do
+                local group = {list[1], list[2], list[3]}
+                upgrade(group)
+                task.wait(0.3)
+                table.remove(list, 1)
+                table.remove(list, 1)
+                table.remove(list, 1)
+            end
+        end
+        task.wait(1)
     end
-    print("✅ Đã nâng cấp xong tất cả nhóm 3 cây có thể.")
 end)
