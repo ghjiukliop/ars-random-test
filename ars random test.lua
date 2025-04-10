@@ -33,14 +33,15 @@ dropdown.Font = Enum.Font.SourceSansBold
 dropdown.TextSize = 16
 
 dropdown.MouseButton1Click:Connect(function()
+    local count = 0 for _ in pairs(weaponTypes) do count = count + 1 end
     local menu = Instance.new("Frame", gui)
-    menu.Size = UDim2.new(0, 180, 0, #weaponTypes * 30)
+    menu.Size = UDim2.new(0, 180, 0, count * 30)
     menu.Position = UDim2.new(0, 20, 0, 140)
     menu.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 
     local i = 0
     for weaponCode, displayName in pairs(weaponTypes) do
-        i = 1
+        i = i + 1
         local btn = Instance.new("TextButton", menu)
         btn.Size = UDim2.new(1, 0, 0, 30)
         btn.Position = UDim2.new(0, 0, 0, (i - 1) * 30)
@@ -54,6 +55,7 @@ dropdown.MouseButton1Click:Connect(function()
         end)
     end
 end)
+
 
 -- Toggle upgrade button
 local toggle = Instance.new("TextButton", gui)
