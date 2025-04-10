@@ -1,18 +1,32 @@
--- Lấy LocalPlayer
-local player = game.Players.LocalPlayer
+-- Lấy đối tượng Weapon
+local weapon = workspace.__Main.__Players.ALS_Clone15:FindFirstChild("Weapon")
 
--- Tìm kiếm SpikeMace239923f trong Inventory
-local spikeMace = player.leaderstats.Inventory.Weapons:FindFirstChild("SpikeMace239923f")
-
--- Kiểm tra xem vũ khí có tồn tại không
-if spikeMace then
-    -- Log cấp độ hiện tại của vũ khí
-    local currentLevel = spikeMace:FindFirstChild("Level") -- Giả sử rằng SpikeMace239923f có thuộc tính Level
-    if currentLevel then
-        print("Cấp độ hiện tại của SpikeMace239923f là: " .. tostring(currentLevel.Value))
-    else
-        print("SpikeMace239923f không có thuộc tính Level.")
+-- Kiểm tra xem Weapon có tồn tại không
+if weapon then
+    -- Hàm để log tất cả các thuộc tính của đối tượng
+    local function logProperties(obj)
+        print("Logging properties for: " .. obj.Name)
+        for _, property in pairs(obj:GetAttributes()) do
+            print("Attribute: " .. tostring(property))
+        end
+        
+        for _, child in pairs(obj:GetChildren()) do
+            print("Child: " .. child.Name)
+            logProperties(child) -- Gọi đệ quy để log các thuộc tính của con
+        end
+        
+        -- Log các thuộc tính của đối tượng
+        for _, prop in pairs(getgc()) do
+            if typeof(prop) == "Instance" and prop == obj then
+                for i, v in pairs(prop:GetAttributes()) do
+                    print("Hidden Property: " .. i .. " = " .. tostring(v))
+                end
+            end
+        end
     end
+
+    -- Gọi hàm logProperties để log thông tin
+    logProperties(weapon)
 else
-    print("Không tìm thấy SpikeMace239923f trong Inventory.")
+    print("Không tìm thấy Weapon trong ALS_Clone15.")
 end
