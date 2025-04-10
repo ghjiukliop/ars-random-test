@@ -35,18 +35,20 @@ local function isBlacklisted(name)
     return false
 end
 
--- Lấy danh sách SpikeMace chưa blacklist
-local function getWeaponList()
+-- Lấy danh sách SpikeMace theo yêu cầu
+local function getWeaponList(includeBlacklist)
     local list = {}
     for _, item in ipairs(weaponFolder:GetChildren()) do
-        if item:IsA("Folder") and item.Name:match("^SpikeMace") and not isBlacklisted(item.Name) then
-            table.insert(list, item.Name)
+        if item:IsA("Folder") and item.Name:match("^SpikeMace") then
+            if includeBlacklist or not isBlacklisted(item.Name) then
+                table.insert(list, item.Name)
+            end
         end
     end
     return list
 end
 
--- Đếm vũ khí để so sánh trước/sau
+-- Đếm vũ khí
 local function countWeapons()
     local count = 0
     for _, item in ipairs(weaponFolder:GetChildren()) do
@@ -57,10 +59,9 @@ local function countWeapons()
     return count
 end
 
--- Gửi nâng cấp và kiểm tra hiệu quả
+-- Gửi upgrade + xử lý kết quả
 local function safeUpgrade(weapons)
     local pre = countWeapons()
-
     local args = {
         [1] = {
             [1] = {
@@ -73,46 +74,50 @@ local function safeUpgrade(weapons)
             [2] = "\n"
         }
     }
-
     remote:FireServer(unpack(args))
-    print("📤 Gửi nâng cấp:", table.concat(weapons, ", "))
+    print("📤 Gửi nâng:", table.concat(weapons, ", "))
     task.wait(0.5)
-
     local post = countWeapons()
-    if post < pre then
-        print("✅ Thành công. Xoá blacklist.")
-        blacklist = {}
-        return true
-    else
-        for _, w in ipairs(weapons) do
-            table.insert(blacklist, w)
-        end
-        print("❌ Thất bại. Đã blacklist:", table.concat(weapons, ", "))
-        return false
-    end
+    return post < pre
 end
 
 -- Vòng lặp nâng cấp
 task.spawn(function()
     while true do
         if upgrading then
-            local list = getWeaponList()
+            local list = getWeaponList(false)
             if #list >= 3 then
                 local group = {list[1], list[2], list[3]}
-                safeUpgrade(group)
-                task.wait(0.3)
+                if not safeUpgrade(group) then
+                    for _, w in ipairs(group) do
+                        table.insert(blacklist, w)
+                    end
+                    print("❌ Thêm vào blacklist:", table.concat(group, ", "))
+                else
+                    blacklist = {} -- upgrade thành công, xóa blacklist
+                    print("✅ Thành công, reset blacklist.")
+                end
             else
-                print("⚠️ Không đủ 3 SpikeMace chưa blacklist → xoá blacklist & thử lại.")
-                blacklist = {}
-                task.wait(0.2)
-
-                local retry = getWeaponList()
-                if #retry >= 3 then
-                    local group = {retry[1], retry[2], retry[3]}
-                    safeUpgrade(group)
+                print("⚠️ Không đủ vũ khí chưa blacklist. Thử lại với blacklist...")
+                local retryList = getWeaponList(true)
+                if #retryList >= 3 then
+                    local group = {retryList[1], retryList[2], retryList[3]}
+                    if safeUpgrade(group) then
+                        print("✅ Thành công từ blacklist! Loại khỏi blacklist.")
+                        blacklist = {} -- reset lại vì đã thành công
+                    else
+                        print("❌ Không thành công từ blacklist. Xóa khỏi blacklist nhóm này.")
+                        for _, w in ipairs(group) do
+                            for i = #blacklist, 1, -1 do
+                                if blacklist[i] == w then
+                                    table.remove(blacklist, i)
+                                end
+                            end
+                        end
+                    end
                     task.wait(0.3)
                 else
-                    print("⏸️ Vẫn không đủ sau reset. Đợi 1 giây.")
+                    print("⏸️ Không còn vũ khí nào hợp lệ. Đợi 1 giây.")
                     task.wait(1)
                 end
             end
