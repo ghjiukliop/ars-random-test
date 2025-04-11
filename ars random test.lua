@@ -6,7 +6,7 @@ local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 local petFolder = player.leaderstats.Inventory:WaitForChild("Pets")
-local remote = ReplicatedStorage.BridgeNet2.dataRemoteEvent
+local remote = ReplicatedStorage:WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent")
 
 local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 local rankList = {"E", "D", "C", "B", "A", "S", "SS", "G", "N"}
