@@ -1,4 +1,4 @@
--- Auto Sell Pet Script with Dropdown Rank Selector
+-- Auto Sell Pet Script with Dropdown Rank (Numeric) Selector
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -9,8 +9,8 @@ local petFolder = player.leaderstats.Inventory:WaitForChild("Pets")
 local remote = ReplicatedStorage:WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent")
 
 local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-local rankList = {"E", "D", "C", "B", "A", "S", "SS", "G", "N"}
-local selectedRank = "E" -- Mặc định bán từ Rank E trở xuống
+local rankList = {1, 2, 3, 4, 5, 6, 7, 8, 9} -- Rank dạng số
+local selectedRank = 1 -- Mặc định bán từ Rank 1 trở xuống
 local autoSelling = false
 
 -- Dropdown chọn Rank
@@ -34,7 +34,7 @@ dropdown.MouseButton1Click:Connect(function()
         local btn = Instance.new("TextButton", menu)
         btn.Size = UDim2.new(1, 0, 0, 30)
         btn.Position = UDim2.new(0, 0, 0, (i - 1) * 30)
-        btn.Text = rank
+        btn.Text = tostring(rank)
         btn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
         btn.TextColor3 = Color3.new(1, 1, 1)
         btn.MouseButton1Click:Connect(function()
@@ -59,21 +59,13 @@ toggle.MouseButton1Click:Connect(function()
     toggle.BackgroundColor3 = autoSelling and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(120, 50, 50)
 end)
 
--- Hàm quy đổi Rank thành số để so sánh
-local function getRankValue(rankStr)
-    local valueMap = {
-        E = 1, D = 2, C = 3, B = 4, A = 5, S = 6, SS = 7, G = 8, N = 9
-    }
-    return valueMap[rankStr] or 0
-end
-
--- Vòng lặp bán pet theo rank
+-- Vòng lặp bán pet theo rank dạng số
 RunService.Heartbeat:Connect(function()
     if not autoSelling then return end
 
     for _, pet in ipairs(petFolder:GetChildren()) do
-        local rankStr = pet:GetAttribute("Rank")
-        if typeof(rankStr) == "string" and getRankValue(rankStr) <= getRankValue(selectedRank) then
+        local rankVal = pet:GetAttribute("Rank")
+        if typeof(rankVal) == "number" and rankVal <= selectedRank then
             local args = {
                 [1] = {
                     [1] = {
@@ -86,7 +78,7 @@ RunService.Heartbeat:Connect(function()
                 }
             }
             remote:FireServer(unpack(args))
-            print("💰 Đã bán pet:", pet.Name, "(Rank:", rankStr .. ")")
+            print("💰 Đã bán pet:", pet.Name, "(Rank:", rankVal .. ")")
             task.wait(0.3)
         end
     end
