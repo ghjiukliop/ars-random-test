@@ -84,7 +84,7 @@ local function updateDropdown()
     jsonFiles = {}
     for _, file in pairs(listfiles()) do
         if file:match("%.json$") then
-            local name = file:match("([^\/]+)%.json$")
+            local name = file:match("([^/\\\\]+)%.json$") -- match cả / và \\
             table.insert(jsonFiles, name)
 
             local btn = Instance.new("TextButton", dropdownScroll)
