@@ -1,4 +1,4 @@
--- SCRIPT: Unit Recorder & Player with JSON
+-- SCRIPT: Unit Recorder & Player with JSON (Lưu vào thư mục Codex/Workspace)
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -11,6 +11,8 @@ local isRecording = false
 local isReplaying = false
 local actionsHistory = {}
 local jsonFiles = {}
+
+local jsonPath = "/storage/emulated/0/Codex/Workspace/"
 
 -- GUI
 local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
@@ -82,9 +84,9 @@ local function updateDropdown()
         if c:IsA("TextButton") then c:Destroy() end
     end
     jsonFiles = {}
-    for _, file in pairs(listfiles()) do
+    for _, file in pairs(listfiles(jsonPath)) do
         if file:match("%.json$") then
-            local name = file:match("([^\\/]+)%.json$")
+            local name = file:match("([^/\\]+)%.json$")
             table.insert(jsonFiles, name)
 
             local btn = Instance.new("TextButton", dropdownScroll)
@@ -119,7 +121,7 @@ recordBtn.MouseButton1Click:Connect(function()
         isRecording = false
         if currentFile then
             local encoded = HttpService:JSONEncode(actionsHistory)
-            writefile(currentFile .. ".json", encoded)
+            writefile(jsonPath .. currentFile .. ".json", encoded)
             status.Text = "✅ Đã lưu: " .. currentFile .. ".json"
             updateDropdown()
         else
@@ -146,7 +148,7 @@ replayBtn.MouseButton1Click:Connect(function()
         status.Text = "❗ Chưa chọn file để phát lại"
         return
     end
-    local fullpath = currentFile .. ".json"
+    local fullpath = jsonPath .. currentFile .. ".json"
     if not isfile(fullpath) then
         status.Text = "❌ File không tồn tại"
         return
