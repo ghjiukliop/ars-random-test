@@ -1,5 +1,4 @@
-
--- SCRIPT: Unit Recorder & Player with JSON to Codex/Workspace
+-- SCRIPT: Unit Recorder & Player with JSON for Codex
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -12,7 +11,6 @@ local isRecording = false
 local isReplaying = false
 local actionsHistory = {}
 local jsonFiles = {}
-local jsonPath = "sdcard/Codex/Workspace/"
 
 -- GUI
 local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
@@ -84,9 +82,9 @@ local function updateDropdown()
         if c:IsA("TextButton") then c:Destroy() end
     end
     jsonFiles = {}
-    for _, file in pairs(listfiles(jsonPath)) do
+    for _, file in ipairs(listfiles()) do
         if file:match("%.json$") then
-            local name = file:match("([^/]+)%.json$")
+            local name = file:match("([^/\\]+)%.json$")
             table.insert(jsonFiles, name)
 
             local btn = Instance.new("TextButton", dropdownScroll)
@@ -117,25 +115,25 @@ UnitEvent.OnClientEvent:Connect(function(event, data)
     end
 end)
 
+-- Ghi khi nhấn Enter trong ô input
+fileNameInput.FocusLost:Connect(function(enterPressed)
+    if enterPressed and fileNameInput.Text ~= "" then
+        currentFile = fileNameInput.Text
+        local encoded = HttpService:JSONEncode(actionsHistory)
+        writefile(currentFile .. ".json", encoded)
+        status.Text = "✅ Đã lưu file: " .. currentFile .. ".json"
+        updateDropdown()
+    end
+end)
+
 -- Nút record
 recordBtn.MouseButton1Click:Connect(function()
     if isRecording then
         isRecording = false
-        if currentFile then
-            local encoded = HttpService:JSONEncode(actionsHistory)
-            writefile(jsonPath .. currentFile .. ".json", encoded)
-            status.Text = "✅ Đã lưu: " .. currentFile .. ".json"
-            updateDropdown()
-        else
-            status.Text = "⚠️ Không lưu vì chưa chọn tên file"
-        end
         recordBtn.Text = "⏺ Bắt đầu ghi"
         recordBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+        status.Text = "🟢 Dừng ghi"
     else
-        local nameFromInput = fileNameInput.Text
-        if nameFromInput and nameFromInput ~= "" then
-            currentFile = nameFromInput
-        end
         actionsHistory = {}
         isRecording = true
         status.Text = currentFile and ("🔴 Ghi file: " .. currentFile .. ".json") or "🔴 Ghi (không lưu)"
@@ -151,7 +149,7 @@ replayBtn.MouseButton1Click:Connect(function()
         status.Text = "❗ Chưa chọn file để phát lại"
         return
     end
-    local fullpath = jsonPath .. currentFile .. ".json"
+    local fullpath = currentFile .. ".json"
     if not isfile(fullpath) then
         status.Text = "❌ File không tồn tại"
         return
