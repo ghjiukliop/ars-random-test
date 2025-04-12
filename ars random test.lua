@@ -85,20 +85,12 @@ local function updateDropdown()
     jsonFiles = {}
 
     for _, file in pairs(listfiles()) do
-        local fileString = nil
+        if typeof(file) == "string" and file ~= "" then
+            local success, name = pcall(function()
+                return file:match("([^/\\]+)%.json$")
+            end)
 
-        -- Try to convert any file-like value to string
-        local success, result = pcall(function()
-            return tostring(file)
-        end)
-
-        if success and type(result) == "string" then
-            fileString = result
-        end
-
-        if fileString and fileString:match("%.json$") then
-            local name = fileString:match("([^/\\]+)%.json$")
-            if name then
+            if success and name then
                 table.insert(jsonFiles, name)
 
                 local btn = Instance.new("TextButton", dropdownScroll)
@@ -118,6 +110,7 @@ local function updateDropdown()
 
     dropdownScroll.CanvasSize = UDim2.new(0, 0, 0, #jsonFiles * 35)
 end
+
 
 
 UnitEvent.OnClientEvent:Connect(function(event, data)
