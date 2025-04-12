@@ -40,31 +40,31 @@ status.TextColor3 = Color3.new(1, 1, 1)
 status.BackgroundTransparency = 1
 status.TextXAlignment = Enum.TextXAlignment.Left
 
-local fileNameInput = Instance.new("TextBox", frame)
-fileNameInput.PlaceholderText = "Tên file (không cần .json)"
-fileNameInput.Size = UDim2.new(0.9, 0, 0, 30)
-fileNameInput.Position = UDim2.new(0.05, 0, 0, 65)
-fileNameInput.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-fileNameInput.TextColor3 = Color3.new(1, 1, 1)
+local folderPathInput = Instance.new("TextBox", frame)
+folderPathInput.PlaceholderText = "Nhập đường dẫn thư mục"
+folderPathInput.Size = UDim2.new(0.9, 0, 0, 30)
+folderPathInput.Position = UDim2.new(0.05, 0, 0, 100) -- Thay thế vị trí của openFolderBtn
+folderPathInput.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+folderPathInput.TextColor3 = Color3.new(1, 1, 1)
 
-local openFolderBtn = Instance.new("TextButton", frame)
-openFolderBtn.Size = UDim2.new(0.9, 0, 0, 30)
-openFolderBtn.Position = UDim2.new(0.05, 0, 0, 100)
-openFolderBtn.Text = "📂 Mở thư mục..."
-openFolderBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 80)
-openFolderBtn.TextColor3 = Color3.new(1, 1, 1)
+local browseFolderBtn = Instance.new("TextButton", frame)
+browseFolderBtn.Size = UDim2.new(0.4, 0, 0, 30)
+browseFolderBtn.Position = UDim2.new(0.55, 0, 0, 100)
+browseFolderBtn.Text = "Duyệt"
+browseFolderBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 80)
+browseFolderBtn.TextColor3 = Color3.new(1, 1, 1)
 
 local dropdownBtn = Instance.new("TextButton", frame)
 dropdownBtn.Size = UDim2.new(0.9, 0, 0, 30)
-dropdownBtn.Position = UDim2.new(0.05, 0, 0, 135)
+dropdownBtn.Position = UDim2.new(0.05, 0, 0, 140) -- Điều chỉnh vị trí
 dropdownBtn.Text = "▼ Chọn file JSON đã lưu"
 dropdownBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 80)
 dropdownBtn.TextColor3 = Color3.new(1, 1, 1)
-dropdownBtn.Visible = false -- Ẩn cho đến khi chọn thư mục
+dropdownBtn.Visible = false
 
 local dropdownFrame = Instance.new("Frame", frame)
 dropdownFrame.Size = UDim2.new(0.9, 0, 0, 150)
-dropdownFrame.Position = UDim2.new(0.05, 0, 0, 170)
+dropdownFrame.Position = UDim2.new(0.05, 0, 0, 175) -- Điều chỉnh vị trí
 dropdownFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 dropdownFrame.Visible = false
 
@@ -90,7 +90,7 @@ replayBtn.TextColor3 = Color3.new(1, 1, 1)
 
 local function populateDropdown(folderPath)
     if not folderPath or folderPath == "" then
-        status.Text = "⚠️ Chưa chọn thư mục lưu file."
+        status.Text = "⚠️ Chưa nhập đường dẫn thư mục."
         dropdownBtn.Visible = false
         dropdownFrame.Visible = false
         return
@@ -100,16 +100,16 @@ local function populateDropdown(folderPath)
         if c:IsA("TextButton") then c:Destroy() end
     end
     jsonFiles = {}
+    local jsonCount = 0
 
     local success, files = pcall(function()
         return listfiles(folderPath)
     end)
 
     if success and files then
-        local jsonCount = 0
         for _, file in pairs(files) do
             if typeof(file) == "string" and file:match("%.json$") then
-                local name = file:match("([^\/]+)%.json$")
+                local name = file:match("^(.+)%.json$")
                 if name then
                     table.insert(jsonFiles, name)
                     jsonCount += 1
@@ -132,6 +132,7 @@ local function populateDropdown(folderPath)
         end
         dropdownScroll.CanvasSize = UDim2.new(0, 0, 0, jsonCount * 35)
         dropdownBtn.Visible = jsonCount > 0
+        lastSaveFolder = folderPath -- Lưu đường dẫn đã nhập
     else
         status.Text = "❌ Lỗi khi đọc thư mục: " .. (files or "")
         dropdownBtn.Visible = false
@@ -214,17 +215,12 @@ dropdownBtn.MouseButton1Click:Connect(function()
     dropdownFrame.Visible = not dropdownFrame.Visible
 end)
 
-openFolderBtn.MouseButton1Click:Connect(function()
-    -- Yêu cầu người dùng chọn một thư mục
-    local chosenFolder = UserInputService:SelectFile() -- Hàm này có thể không hoạt động trên mọi executor
-    if chosenFolder then
-        lastSaveFolder = chosenFolder
-        status.Text = "📁 Đã chọn thư mục: " .. chosenFolder
-        populateDropdown(chosenFolder)
+browseFolderBtn.MouseButton1Click:Connect(function()
+    local path = folderPathInput.Text
+    if path and path ~= "" then
+        populateDropdown(path)
     else
-        status.Text = "⚠️ Không có thư mục nào được chọn."
-        dropdownBtn.Visible = false
-        dropdownFrame.Visible = false
+        status.Text = "⚠️ Vui lòng nhập đường dẫn thư mục."
     end
 end)
 
