@@ -1,4 +1,4 @@
--- SCRIPT: Unit Recorder & Player with JSON (No custom path)
+-- SCRIPT: Codex Unit Recorder & Player (Executor-Compatible, Safe Dropdown)
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -45,7 +45,7 @@ fileNameInput.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
 fileNameInput.TextColor3 = Color3.new(1, 1, 1)
 
 local dropdownBtn = Instance.new("TextButton", frame)
-dropdownBtn.Size = UDim2.new(0.9, 0, 0, 30)
+dropdownBtn.Size = UDim2.new(0, 270, 0, 30)
 dropdownBtn.Position = UDim2.new(0.05, 0, 0, 100)
 dropdownBtn.Text = "📂 Chọn file JSON ▼"
 dropdownBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 80)
@@ -83,21 +83,24 @@ local function updateDropdown()
     end
     jsonFiles = {}
     for _, file in pairs(listfiles()) do
-        if file:match("%.json$") then
-            local name = file:match("([^/\\\\]+)%.json$") -- match cả / và \\
-            table.insert(jsonFiles, name)
-
-            local btn = Instance.new("TextButton", dropdownScroll)
-            btn.Size = UDim2.new(1, 0, 0, 30)
-            btn.Text = name
-            btn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-            btn.TextColor3 = Color3.new(1, 1, 1)
-            btn.MouseButton1Click:Connect(function()
-                currentFile = name
-                dropdownBtn.Text = "📂 " .. name
-                dropdownFrame.Visible = false
-                status.Text = "📁 Đã chọn: " .. name
+        if typeof(file) == "string" and file:match("%.json$") then
+            local success, name = pcall(function()
+                return file:match("([^/\\]+)%.json$")
             end)
+            if success and name then
+                table.insert(jsonFiles, name)
+                local btn = Instance.new("TextButton", dropdownScroll)
+                btn.Size = UDim2.new(1, 0, 0, 30)
+                btn.Text = name
+                btn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+                btn.TextColor3 = Color3.new(1, 1, 1)
+                btn.MouseButton1Click:Connect(function()
+                    currentFile = name
+                    dropdownBtn.Text = "📂 " .. name
+                    dropdownFrame.Visible = false
+                    status.Text = "📁 Đã chọn: " .. name
+                end)
+            end
         end
     end
     dropdownScroll.CanvasSize = UDim2.new(0, 0, 0, #jsonFiles * 35)
