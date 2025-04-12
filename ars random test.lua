@@ -85,24 +85,33 @@ local function updateDropdown()
     jsonFiles = {}
 
     for _, file in pairs(listfiles()) do
-        if typeof(file) == "string" then
-            if file:match("%.json$") then
-                local name = file:match("([^/\\]+)%.json$")
-                if name then
-                    table.insert(jsonFiles, name)
+        local fileString = nil
 
-                    local btn = Instance.new("TextButton", dropdownScroll)
-                    btn.Size = UDim2.new(1, 0, 0, 30)
-                    btn.Text = name
-                    btn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-                    btn.TextColor3 = Color3.new(1, 1, 1)
-                    btn.MouseButton1Click:Connect(function()
-                        currentFile = name
-                        dropdownBtn.Text = "📂 " .. name
-                        dropdownFrame.Visible = false
-                        status.Text = "📁 Đã chọn: " .. name
-                    end)
-                end
+        -- Try to convert any file-like value to string
+        local success, result = pcall(function()
+            return tostring(file)
+        end)
+
+        if success and type(result) == "string" then
+            fileString = result
+        end
+
+        if fileString and fileString:match("%.json$") then
+            local name = fileString:match("([^/\\]+)%.json$")
+            if name then
+                table.insert(jsonFiles, name)
+
+                local btn = Instance.new("TextButton", dropdownScroll)
+                btn.Size = UDim2.new(1, 0, 0, 30)
+                btn.Text = name
+                btn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+                btn.TextColor3 = Color3.new(1, 1, 1)
+                btn.MouseButton1Click:Connect(function()
+                    currentFile = name
+                    dropdownBtn.Text = "📂 " .. name
+                    dropdownFrame.Visible = false
+                    status.Text = "📁 Đã chọn: " .. name
+                end)
             end
         end
     end
