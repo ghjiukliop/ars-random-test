@@ -1,4 +1,4 @@
--- SCRIPT: Unit Recorder & Player with JSON for Codex
+-- SCRIPT: Unit Recorder & Player with JSON
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -82,9 +82,9 @@ local function updateDropdown()
         if c:IsA("TextButton") then c:Destroy() end
     end
     jsonFiles = {}
-    for _, file in ipairs(listfiles()) do
+    for _, file in pairs(listfiles()) do
         if file:match("%.json$") then
-            local name = file:match("([^/\\]+)%.json$")
+            local name = file:match("([^\\/]+)%.json$")
             table.insert(jsonFiles, name)
 
             local btn = Instance.new("TextButton", dropdownScroll)
@@ -103,7 +103,6 @@ local function updateDropdown()
     dropdownScroll.CanvasSize = UDim2.new(0, 0, 0, #jsonFiles * 35)
 end
 
--- Ghi dữ liệu
 UnitEvent.OnClientEvent:Connect(function(event, data)
     if isRecording then
         table.insert(actionsHistory, {
@@ -115,25 +114,24 @@ UnitEvent.OnClientEvent:Connect(function(event, data)
     end
 end)
 
--- Ghi khi nhấn Enter trong ô input
-fileNameInput.FocusLost:Connect(function(enterPressed)
-    if enterPressed and fileNameInput.Text ~= "" then
-        currentFile = fileNameInput.Text
-        local encoded = HttpService:JSONEncode(actionsHistory)
-        writefile(currentFile .. ".json", encoded)
-        status.Text = "✅ Đã lưu file: " .. currentFile .. ".json"
-        updateDropdown()
-    end
-end)
-
--- Nút record
 recordBtn.MouseButton1Click:Connect(function()
     if isRecording then
         isRecording = false
+        if currentFile then
+            local encoded = HttpService:JSONEncode(actionsHistory)
+            writefile(currentFile .. ".json", encoded)
+            status.Text = "✅ Đã lưu: " .. currentFile .. ".json"
+            updateDropdown()
+        else
+            status.Text = "⚠️ Không lưu vì chưa chọn tên file"
+        end
         recordBtn.Text = "⏺ Bắt đầu ghi"
         recordBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-        status.Text = "🟢 Dừng ghi"
     else
+        local nameFromInput = fileNameInput.Text
+        if nameFromInput and nameFromInput ~= "" then
+            currentFile = nameFromInput
+        end
         actionsHistory = {}
         isRecording = true
         status.Text = currentFile and ("🔴 Ghi file: " .. currentFile .. ".json") or "🔴 Ghi (không lưu)"
@@ -142,7 +140,6 @@ recordBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Nút replay
 replayBtn.MouseButton1Click:Connect(function()
     if isReplaying then return end
     if not currentFile then
@@ -170,11 +167,9 @@ replayBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Nút dropdown
 dropdownBtn.MouseButton1Click:Connect(function()
     dropdownFrame.Visible = not dropdownFrame.Visible
     if dropdownFrame.Visible then updateDropdown() end
 end)
 
--- Bắt đầu
 updateDropdown()
