@@ -10,9 +10,32 @@ local enemiesFolder = workspace:WaitForChild("__Main"):WaitForChild("__Enemies")
 
 local targetEnemy = nil
 local recentlyKilledEnemies = {}
-local canCollideOriginal = humanoidRootPart.CanCollide
 
-local moveSpeed = 80 -- tốc độ di chuyển
+-- ⚙️ Dễ dàng điều chỉnh tốc độ
+local moveSpeed = 150
+
+-- Lưu lại trạng thái CanCollide gốc của từng part
+local originalCollideStates = {}
+
+-- Đi xuyên vật thể cho toàn bộ part
+local function setNoCollideAllParts()
+	for _, part in ipairs(character:GetDescendants()) do
+		if part:IsA("BasePart") then
+			originalCollideStates[part] = part.CanCollide
+			part.CanCollide = false
+		end
+	end
+end
+
+-- Khôi phục trạng thái CanCollide
+local function restoreCollideAllParts()
+	for part, original in pairs(originalCollideStates) do
+		if part and part:IsA("BasePart") then
+			part.CanCollide = original
+		end
+	end
+	originalCollideStates = {}
+end
 
 local function getEnemyHealthFromGUI(enemy)
 	if enemy and enemy:FindFirstChild("HealthBar") then
@@ -35,8 +58,7 @@ local function findNearestSL1Enemy()
 		local isRecentlyKilled = table.find(recentlyKilledEnemies, enemy) ~= nil
 
 		if attributes and attributes["ID"] == "SL1" and enemy:FindFirstChild("Head") and not isRecentlyKilled then
-			local enemyHead = enemy:FindFirstChild("Head")
-			local distance = (humanoidRootPart.Position - enemyHead.Position).Magnitude
+			local distance = (humanoidRootPart.Position - enemy.Head.Position).Magnitude
 			if distance < minDistance then
 				minDistance = distance
 				nearestEnemy = enemy
@@ -44,12 +66,6 @@ local function findNearestSL1Enemy()
 		end
 	end
 	return nearestEnemy
-end
-
-local function restoreCanCollide()
-	if canCollideOriginal ~= nil then
-		humanoidRootPart.CanCollide = canCollideOriginal
-	end
 end
 
 local checkTargetInterval = 0.5
@@ -73,20 +89,20 @@ RunService.Heartbeat:Connect(function(deltaTime)
 			if nearest then
 				targetEnemy = nearest
 				print("🎯 Tìm thấy mục tiêu:", targetEnemy.Name)
-				humanoidRootPart.CanCollide = false -- bật đi xuyên
+				setNoCollideAllParts()
 			else
 				print("❌ Không tìm thấy enemy SL1.")
-				restoreCanCollide()
+				restoreCollideAllParts()
 			end
 		elseif getEnemyHealthFromGUI(targetEnemy) <= 0 then
 			print("☠️ Mục tiêu", targetEnemy.Name, "đã chết.")
 			table.insert(recentlyKilledEnemies, targetEnemy)
 			targetEnemy = nil
-			restoreCanCollide()
+			restoreCollideAllParts()
 		end
 	end
 
-	-- Nếu đang có mục tiêu, di chuyển vật lý tới HEAD của kẻ địch
+	-- Nếu đang có mục tiêu, di chuyển vật lý tới đầu kẻ địch
 	if targetEnemy and targetEnemy:FindFirstChild("Head") then
 		local enemyHead = targetEnemy.Head
 		local direction = (enemyHead.Position - humanoidRootPart.Position).Unit
@@ -102,6 +118,7 @@ RunService.Heartbeat:Connect(function(deltaTime)
 	end
 end)
 
+-- Khi nhân vật bị huỷ
 character.Destroying:Connect(function()
-	restoreCanCollide()
+	restoreCollideAllParts()
 end)
