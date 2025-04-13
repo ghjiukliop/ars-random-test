@@ -1,3 +1,5 @@
+-- ✅ Auto Chase SL1 Enemy with Noclip (Updated Version)
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
@@ -11,35 +13,45 @@ local enemiesFolder = workspace:WaitForChild("__Main"):WaitForChild("__Enemies")
 local targetEnemy = nil
 local recentlyKilledEnemies = {}
 
--- ⚙️ Dễ dàng điều chỉnh tốc độ
+-- ⚙️ Tốc độ di chuyển
 local moveSpeed = 150
 
--- Lưu lại trạng thái CanCollide gốc của từng part
-local originalCollideStates = {}
+-- 🧊 Noclip system
+local Noclip = nil
+local Clip = nil
 
--- Đi xuyên vật thể cho toàn bộ part
-local function setNoCollideAllParts()
-	for _, part in ipairs(character:GetDescendants()) do
-		if part:IsA("BasePart") then
-			originalCollideStates[part] = part.CanCollide
-			part.CanCollide = false
+function noclip()
+	Clip = false
+	local function Nocl()
+		if not Clip and player.Character ~= nil then
+			for _, v in pairs(player.Character:GetDescendants()) do
+				if v:IsA("BasePart") and v.CanCollide then
+					v.CanCollide = false
+				end
+			end
 		end
+		wait(0.21)
 	end
+	Noclip = RunService.Stepped:Connect(Nocl)
 end
 
--- Khôi phục trạng thái CanCollide
-local function restoreCollideAllParts()
-	for part, original in pairs(originalCollideStates) do
-		if part and part:IsA("BasePart") then
-			part.CanCollide = original
-		end
-	end
-	originalCollideStates = {}
+function clip()
+	if Noclip then Noclip:Disconnect() end
+	Clip = true
 end
 
+-- 🚫 Tắt noclip khi huỷ nhân vật
+character.Destroying:Connect(function()
+	clip()
+end)
+
+-- Lấy máu từ HealthBar GUI
 local function getEnemyHealthFromGUI(enemy)
 	if enemy and enemy:FindFirstChild("HealthBar") then
-		local amountLabel = enemy.HealthBar:FindFirstChild("Main") and enemy.HealthBar.Main:FindFirstChild("Bar") and enemy.HealthBar.Main.Bar:FindFirstChild("Amount")
+		local amountLabel = enemy.HealthBar:FindFirstChild("Main")
+			and enemy.HealthBar.Main:FindFirstChild("Bar")
+			and enemy.HealthBar.Main.Bar:FindFirstChild("Amount")
+
 		if amountLabel and amountLabel:IsA("TextLabel") then
 			local text = amountLabel.Text
 			local value = tonumber(text:match("%d+"))
@@ -49,6 +61,7 @@ local function getEnemyHealthFromGUI(enemy)
 	return 0
 end
 
+-- Tìm enemy gần nhất có ID = SL1
 local function findNearestSL1Enemy()
 	local nearestEnemy = nil
 	local minDistance = math.huge
@@ -68,11 +81,15 @@ local function findNearestSL1Enemy()
 	return nearestEnemy
 end
 
+-- Bắt đầu noclip
+noclip()
+
+-- Theo dõi mục tiêu
 local checkTargetInterval = 0.5
 local lastCheckTime = 0
 
 RunService.Heartbeat:Connect(function(deltaTime)
-	lastCheckTime += deltaTime
+	lastCheckTime = lastCheckTime + deltaTime
 
 	-- Dọn danh sách kẻ địch đã chết
 	for i = #recentlyKilledEnemies, 1, -1 do
@@ -89,16 +106,14 @@ RunService.Heartbeat:Connect(function(deltaTime)
 			if nearest then
 				targetEnemy = nearest
 				print("🎯 Tìm thấy mục tiêu:", targetEnemy.Name)
-				setNoCollideAllParts()
 			else
 				print("❌ Không tìm thấy enemy SL1.")
-				restoreCollideAllParts()
+				clip()
 			end
 		elseif getEnemyHealthFromGUI(targetEnemy) <= 0 then
 			print("☠️ Mục tiêu", targetEnemy.Name, "đã chết.")
 			table.insert(recentlyKilledEnemies, targetEnemy)
 			targetEnemy = nil
-			restoreCollideAllParts()
 		end
 	end
 
@@ -116,9 +131,4 @@ RunService.Heartbeat:Connect(function(deltaTime)
 
 		print("❤️ Đang theo dõi:", targetEnemy.Name, " - HP:", getEnemyHealthFromGUI(targetEnemy))
 	end
-end)
-
--- Khi nhân vật bị huỷ
-character.Destroying:Connect(function()
-	restoreCollideAllParts()
 end)
