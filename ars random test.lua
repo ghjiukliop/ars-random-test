@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
@@ -11,8 +12,12 @@ local enemiesFolder = workspace:WaitForChild("__Main"):WaitForChild("__Enemies")
 local targetEnemy = nil
 local recentlyKilledEnemies = {} -- Bảng để lưu trữ các kẻ địch vừa bị "tiêu diệt"
 
+-- Cài đặt cho việc di chuyển nhanh và xuyên vật thể
+local moveSpeed = 50 -- Tốc độ di chuyển tới mục tiêu (studs/giây)
+local canCollideOriginal = nil
+
 local function getEnemyHealthFromGUI(enemy)
-    if enemy and enemy:FindFirstChild("HealthBar") and enemy.HealthBar:FindFirstChild("Main") and enemy.HealthBar.Main:FindFirstChild("Bar") and enemy.HealthBar.Main.Bar:FindFirstChild("Amount") and enemy.HealthBar.Main.Bar.Amount:IsA("TextLabel") then
+    if enemy and enemy:FindFirstChild("HealthBar") and enemy.HealthBar.Main:FindFirstChild("Bar") and enemy.HealthBar.Main.Bar:FindFirstChild("Amount") and enemy.HealthBar.Main.Bar.Amount:IsA("TextLabel") then
         local healthString = enemy.HealthBar.Main.Bar.Amount.Text
         local healthMatch = healthString:match("(%d+)")
         if healthMatch then
@@ -51,15 +56,36 @@ local function findNearestSL1Enemy()
     return nearestEnemy
 end
 
-local function teleportToEnemy(enemy)
+local function moveToEnemy(enemy)
     if enemy and humanoidRootPart then
-        humanoidRootPart.CFrame = enemy:WaitForChild("HumanoidRootPart").CFrame + Vector3.new(0, 2, 0)
+        local targetPosition = enemy:WaitForChild("HumanoidRootPart").Position
+        local distance = (humanoidRootPart.Position - targetPosition).Magnitude
+        local duration = distance / moveSpeed -- Tính thời gian di chuyển dựa trên tốc độ và khoảng cách
+
+        local tweenInfo = TweenInfo.new(
+            duration,
+            Enum.EasingStyle.Linear,
+            Enum.EasingDirection.Out,
+            0,
+            false,
+            0
+        )
+
+        local tween = TweenService:Create(humanoidRootPart, tweenInfo, {CFrame = CFrame.new(targetPosition + Vector3.new(0, 2, 0))})
+        tween:Play()
+    end
+end
+
+local function setCanCollide(canCollide)
+    for _, part in ipairs(character:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = canCollide
+        end
     end
 end
 
 local checkTargetInterval = 0.5
 local lastCheckTime = 0
-local timeToForgetKilledEnemy = 3 -- Thời gian (giây) để quên một kẻ địch đã chết
 
 RunService.Heartbeat:Connect(function(deltaTime)
     lastCheckTime += deltaTime
@@ -80,23 +106,43 @@ RunService.Heartbeat:Connect(function(deltaTime)
             if nearestSL1 then
                 targetEnemy = nearestSL1
                 print("Đã tìm thấy mục tiêu SL1:", targetEnemy.Name)
-                teleportToEnemy(targetEnemy)
+                if canCollideOriginal == nil then
+                    canCollideOriginal = character:WaitForChild("HumanoidRootPart").CanCollide
+                end
+                setCanCollide(false) -- Bật đi xuyên vật thể
+                moveToEnemy(targetEnemy)
             else
                 print("Không tìm thấy kẻ địch SL1.")
+                if canCollideOriginal ~= nil then
+                    setCanCollide(canCollideOriginal) -- Khôi phục CanCollide
+                    canCollideOriginal = nil
+                end
             end
         elseif targetEnemy and getEnemyHealthFromGUI(targetEnemy) <= 0 then
             -- Mục tiêu hiện tại đã hết máu
             print("Mục tiêu hiện tại:", targetEnemy.Name, "đã hết máu (GUI). Tìm mục tiêu mới.")
             table.insert(recentlyKilledEnemies, targetEnemy) -- Thêm kẻ địch đã chết vào danh sách
             targetEnemy = nil -- Reset targetEnemy để tìm mục tiêu mới ở frame tiếp theo
+            if canCollideOriginal ~= nil then
+                setCanCollide(canCollideOriginal) -- Khôi phục CanCollide
+                canCollideOriginal = nil
+            end
         elseif targetEnemy then
             -- Tiếp tục theo dõi mục tiêu hiện tại
-            local enemyRootPart = targetEnemy:WaitForChild("HumanoidRootPart")
-            local distance = (humanoidRootPart.Position - enemyRootPart.Position).Magnitude
-            if distance > 10 then -- Nếu người chơi quá xa, dịch chuyển lại (tùy chỉnh khoảng cách)
-                teleportToEnemy(targetEnemy)
+            local distance = (humanoidRootPart.Position - targetEnemy:WaitForChild("HumanoidRootPart").Position).Magnitude
+            if distance > 5 then -- Nếu người chơi quá xa, di chuyển lại gần mục tiêu
+                moveToEnemy(targetEnemy)
             end
             print("Đang theo dõi mục tiêu:", targetEnemy.Name, "Máu (GUI):", getEnemyHealthFromGUI(targetEnemy))
         end
     end
+end
+
+-- Đảm bảo CanCollide được khôi phục khi script bị dừng hoặc nhân vật bị xóa
+character:Destroying:Connect(function()
+    if canCollideOriginal ~= nil then
+        setCanCollide(canCollideOriginal)
+    end
 end)
+
+game:GetService("Debris"):AddItem(script, 5) -- Đảm bảo script tự xóa sau một thời gian nếu có lỗi ngăn chặn Destroying event
