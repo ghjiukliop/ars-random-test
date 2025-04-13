@@ -66,7 +66,7 @@ RunService.Heartbeat:Connect(function(deltaTime)
 
     -- Xóa các kẻ địch đã chết khỏi danh sách sau một khoảng thời gian
     for i = #recentlyKilledEnemies, 1, -1 do
-        if not game:IsDescendant(recentlyKilledEnemies[i]) then
+        if recentlyKilledEnemies[i] and not game:IsDescendant(recentlyKilledEnemies[i]) then
             table.remove(recentlyKilledEnemies, i)
         end
     end
