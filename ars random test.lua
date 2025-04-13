@@ -128,11 +128,8 @@ RunService.Heartbeat:Connect(function(deltaTime)
                 canCollideOriginal = nil
             end
         elseif targetEnemy then
-            -- Tiếp tục theo dõi mục tiêu hiện tại
-            local distance = (humanoidRootPart.Position - targetEnemy:WaitForChild("HumanoidRootPart").Position).Magnitude
-            if distance > 5 then -- Nếu người chơi quá xa, di chuyển lại gần mục tiêu
-                moveToEnemy(targetEnemy)
-            end
+            -- Luôn di chuyển đến mục tiêu nếu có mục tiêu
+            moveToEnemy(targetEnemy)
             print("Đang theo dõi mục tiêu:", targetEnemy.Name, "Máu (GUI):", getEnemyHealthFromGUI(targetEnemy))
         end
     end
