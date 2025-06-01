@@ -7,8 +7,16 @@ local farms = workspace:FindFirstChild("Farm")
 --// Biến
 local playerFarm = nil
 local plantObjects = {}
-local uniquePlantNames = {}
-local selectedPlantName = nil
+local allPlantNames = { -- Danh sách toàn bộ cây bạn cung cấp
+	"Apple","Avocado","Banana","Beanstalk","Blood Banana","Blueberry","Cacao","Cactus","Candy Blossom",
+	"Celestiberry","Cherry Blossom","Cherry OLD","Coconut","Corn","Cranberry","Crimson Vine","Cursed Fruit",
+	"Dragon Fruit","Durian","Easter Egg","Eggplant","Ember Lily","Foxglove","Glowshroom","Grape","Hive Fruit",
+	"Lemon","Lilac","Lotus","Mango","Mint","Moon Blossom","Moon Mango","Moon Melon","Moonflower","Moonglow",
+	"Nectarine","Papaya","Passionfruit","Peach","Pear","Pepper","Pineapple","Pink Lily","Purple Cabbage",
+	"Purple Dahlia","Raspberry","Rose","Soul Fruit","Starfruit","Strawberry","Succulent","Sunflower","Tomato",
+	"Venus Fly Trap"
+}
+local selectedPlants = {}
 local collecting = false
 
 --// Tìm farm của người chơi
@@ -27,7 +35,7 @@ if not playerFarm then
 	return
 end
 
---// Lấy danh sách cây
+--// Lấy danh sách cây trong farm của người chơi
 local plantsFolder = playerFarm.Important:FindFirstChild("Plants_Physical")
 if not plantsFolder then
 	warn("❌ Không tìm thấy Plants_Physical.")
@@ -36,24 +44,12 @@ end
 
 plantObjects = plantsFolder:GetChildren()
 
---// Danh sách toàn bộ cây để drop-down (theo yêu cầu)
-local allPlantNames = {
-	"Apple","Avocado","Banana","Beanstalk","Blood Banana","Blueberry","Cacao","Cactus",
-	"Candy Blossom","Celestiberry","Cherry Blossom","Cherry OLD","Coconut","Corn",
-	"Cranberry","Crimson Vine","Cursed Fruit","Dragon Fruit","Durian","Easter Egg",
-	"Eggplant","Ember Lily","Foxglove","Glowshroom","Grape","Hive Fruit","Lemon","Lilac",
-	"Lotus","Mango","Mint","Moon Blossom","Moon Mango","Moon Melon","Moonflower","Moonglow",
-	"Nectarine","Papaya","Passionfruit","Peach","Pear","Pepper","Pineapple","Pink Lily",
-	"Purple Cabbage","Purple Dahlia","Raspberry","Rose","Soul Fruit","Starfruit","Strawberry",
-	"Succulent","Sunflower","Tomato","Venus Fly Trap"
-}
-
---// Giao diện
+--// Tạo giao diện
 local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-screenGui.Name = "FruitCollectorGUI"
+screenGui.Name = "MultiFruitCollectorGUI"
 
 local frame = Instance.new("Frame", screenGui)
-frame.Size = UDim2.new(0, 280, 0, 220)
+frame.Size = UDim2.new(0, 280, 0, 300)
 frame.Position = UDim2.new(0, 20, 0, 150)
 frame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
 frame.BorderSizePixel = 0
@@ -65,36 +61,25 @@ local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1, 0, 0, 30)
 title.Position = UDim2.new(0, 0, 0, 0)
 title.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-title.Text = "🌿 Auto Fruit Collector"
+title.Text = "🌿 Multi Fruit Collector"
 title.TextColor3 = Color3.new(1, 1, 1)
 title.Font = Enum.Font.Gotham
 title.TextSize = 16
 title.BorderSizePixel = 0
 
-local dropdown = Instance.new("TextButton", frame)
-dropdown.Size = UDim2.new(1, -20, 0, 30)
-dropdown.Position = UDim2.new(0, 10, 0, 40)
-dropdown.Text = "🔽 Chọn loại cây"
-dropdown.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-dropdown.TextColor3 = Color3.new(1, 1, 1)
-dropdown.Font = Enum.Font.Gotham
-dropdown.TextSize = 14
-
 local searchBox = Instance.new("TextBox", frame)
-searchBox.Size = UDim2.new(1, -20, 0, 25)
-searchBox.Position = UDim2.new(0, 10, 0, 75)
-searchBox.PlaceholderText = "🔍 Tìm cây..."
-searchBox.Text = ""
-searchBox.ClearTextOnFocus = false
-searchBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+searchBox.Size = UDim2.new(1, -20, 0, 30)
+searchBox.Position = UDim2.new(0, 10, 0, 40)
+searchBox.PlaceholderText = "🔍 Tìm kiếm cây..."
+searchBox.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 searchBox.TextColor3 = Color3.new(1, 1, 1)
+searchBox.ClearTextOnFocus = false
 searchBox.Font = Enum.Font.Gotham
 searchBox.TextSize = 14
 
 local dropdownList = Instance.new("ScrollingFrame", frame)
-dropdownList.Size = UDim2.new(1, -20, 0, 100)
-dropdownList.Position = UDim2.new(0, 10, 0, 105)
-dropdownList.Visible = false
+dropdownList.Size = UDim2.new(1, -20, 0, 180)
+dropdownList.Position = UDim2.new(0, 10, 0, 75)
 dropdownList.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
 dropdownList.BorderSizePixel = 0
 dropdownList.ScrollBarThickness = 6
@@ -105,49 +90,9 @@ local layout = Instance.new("UIListLayout", dropdownList)
 layout.SortOrder = Enum.SortOrder.LayoutOrder
 layout.Padding = UDim.new(0, 2)
 
--- Tạo nút cho từng loại cây từ danh sách allPlantNames
-for _, name in ipairs(allPlantNames) do
-	local btn = Instance.new("TextButton", dropdownList)
-	btn.Size = UDim2.new(1, 0, 0, 25)
-	btn.Text = name
-	btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-	btn.TextColor3 = Color3.new(1, 1, 1)
-	btn.Font = Enum.Font.Gotham
-	btn.TextSize = 13
-
-	btn.MouseButton1Click:Connect(function()
-		selectedPlantName = name
-		dropdown.Text = "🌳 " .. selectedPlantName
-		dropdownList.Visible = false
-		searchBox.Text = ""
-		updateDropdownList("")
-	end)
-end
-
-dropdown.MouseButton1Click:Connect(function()
-	dropdownList.Visible = not dropdownList.Visible
-	if dropdownList.Visible then
-		searchBox.Text = ""
-		updateDropdownList("")
-	end
-end)
-
-local function updateDropdownList(filterText)
-	filterText = filterText:lower()
-	for _, btn in ipairs(dropdownList:GetChildren()) do
-		if btn:IsA("TextButton") then
-			btn.Visible = btn.Text:lower():find(filterText) and true or false
-		end
-	end
-end
-
-searchBox:GetPropertyChangedSignal("Text"):Connect(function()
-	updateDropdownList(searchBox.Text)
-end)
-
 local autoBtn = Instance.new("TextButton", frame)
 autoBtn.Size = UDim2.new(1, -20, 0, 30)
-autoBtn.Position = UDim2.new(0, 10, 1, -50)
+autoBtn.Position = UDim2.new(0, 10, 1, -40)
 autoBtn.BackgroundColor3 = Color3.fromRGB(80, 130, 90)
 autoBtn.Text = "▶️ Bắt đầu Auto"
 autoBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -169,29 +114,103 @@ local function collectFruit(fruit)
 	end
 end
 
---// Vòng lặp thu thập tự động, tăng tốc bằng delay nhỏ hơn
+--// Hàm kiểm tra người chơi có cây này không
+local function playerHasPlant(plantName)
+	for _, plant in ipairs(plantObjects) do
+		if plant.Name == plantName then
+			return true
+		end
+	end
+	return false
+end
+
+--// Tạo nút cây trong dropdown
+local function createPlantButton(name)
+	local btn = Instance.new("TextButton", dropdownList)
+	btn.Size = UDim2.new(1, 0, 0, 25)
+	btn.Text = name
+	btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+	btn.TextColor3 = Color3.new(1, 1, 1)
+	btn.Font = Enum.Font.Gotham
+	btn.TextSize = 13
+	btn.TextXAlignment = Enum.TextXAlignment.Left
+
+	local selectedMark = Instance.new("TextLabel", btn)
+	selectedMark.Size = UDim2.new(0, 20, 1, 0)
+	selectedMark.Position = UDim2.new(1, -22, 0, 0)
+	selectedMark.Text = ""
+	selectedMark.TextColor3 = Color3.new(0, 1, 0)
+	selectedMark.BackgroundTransparency = 1
+	selectedMark.Font = Enum.Font.Gotham
+	selectedMark.TextSize = 18
+
+	btn.MouseButton1Click:Connect(function()
+		if selectedPlants[name] then
+			selectedPlants[name] = nil
+			selectedMark.Text = ""
+		else
+			if playerHasPlant(name) then
+				selectedPlants[name] = true
+				selectedMark.Text = "✔"
+			else
+				warn("Bạn không có cây " .. name)
+			end
+		end
+	end)
+	return btn
+end
+
+-- Tạo tất cả nút cây
+local plantButtons = {}
+for _, name in ipairs(allPlantNames) do
+	plantButtons[name] = createPlantButton(name)
+end
+
+--// Lọc danh sách theo search
+local function updateDropdownList(searchText)
+	searchText = searchText:lower()
+	local yPos = 0
+	for name, btn in pairs(plantButtons) do
+		if searchText == "" or name:lower():find(searchText) then
+			btn.Visible = true
+		else
+			btn.Visible = false
+		end
+	end
+end
+
+searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+	updateDropdownList(searchBox.Text)
+end)
+
+-- Khởi tạo danh sách hiện tất cả
+updateDropdownList("")
+
+--// Vòng lặp thu thập
 task.spawn(function()
 	while true do
-		if collecting and selectedPlantName then
-			for _, plant in ipairs(plantObjects) do
-				if plant.Name == selectedPlantName then
-					local fruitFolder = plant:FindFirstChild("Fruits")
-					if fruitFolder then
-						for _, fruit in ipairs(fruitFolder:GetChildren()) do
-							collectFruit(fruit)
-							task.wait(0.02) -- delay rất nhỏ để tăng tốc
+		if collecting and next(selectedPlants) then
+			for plantName in pairs(selectedPlants) do
+				for _, plant in ipairs(plantObjects) do
+					if plant.Name == plantName then
+						local fruitFolder = plant:FindFirstChild("Fruits")
+						if fruitFolder then
+							for _, fruit in ipairs(fruitFolder:GetChildren()) do
+								collectFruit(fruit)
+								task.wait(0.02) -- Tốc độ thu thập
+							end
 						end
 					end
 				end
 			end
-			task.wait(0.1) -- delay nhỏ giữa mỗi vòng để tránh lag quá
+			task.wait(0.1) -- Delay giữa các vòng thu thập
 		else
 			task.wait(0.5)
 		end
 	end
 end)
 
---// Bật/tắt thu thập
+--// Bật/tắt auto
 autoBtn.MouseButton1Click:Connect(function()
 	collecting = not collecting
 	autoBtn.Text = collecting and "⏸️ Dừng Auto" or "▶️ Bắt đầu Auto"
