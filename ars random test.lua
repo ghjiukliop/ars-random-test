@@ -18,7 +18,7 @@ local selectedPlantNames = {}
 local collecting = false
 local playerFarm
 
---// Tìm farm của người chơi
+--// Tìm farm người chơi
 local farms = workspace:FindFirstChild("Farm")
 if farms then
 	for _, farm in ipairs(farms:GetChildren()) do
@@ -41,12 +41,12 @@ if not plantObjects then
 	return
 end
 
---// Giao diện
+--// GUI
 local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 screenGui.Name = "FruitCollectorGUI"
 
 local frame = Instance.new("Frame", screenGui)
-frame.Size = UDim2.new(0, 300, 0, 300)
+frame.Size = UDim2.new(0, 300, 0, 350)
 frame.Position = UDim2.new(0, 20, 0, 150)
 frame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
 frame.BorderSizePixel = 0
@@ -74,7 +74,6 @@ selectedLabel.TextWrapped = true
 selectedLabel.Text = "🌱 Cây đã chọn: (Chưa có)"
 selectedLabel.BorderSizePixel = 0
 
--- Hàm cập nhật label
 local function updateSelectedLabel()
 	if #selectedPlantNames == 0 then
 		selectedLabel.Text = "🌱 Cây đã chọn: (Chưa có)"
@@ -83,30 +82,45 @@ local function updateSelectedLabel()
 	end
 end
 
--- Danh sách cây để chọn
+-- Ô tìm kiếm
+local searchBox = Instance.new("TextBox", frame)
+searchBox.Size = UDim2.new(1, -20, 0, 30)
+searchBox.Position = UDim2.new(0, 10, 0, 80)
+searchBox.PlaceholderText = "🔍 Tìm cây..."
+searchBox.Text = ""
+searchBox.Font = Enum.Font.Gotham
+searchBox.TextSize = 14
+searchBox.TextColor3 = Color3.new(1, 1, 1)
+searchBox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+searchBox.BorderSizePixel = 0
+
+-- Danh sách cây
 local dropdownList = Instance.new("ScrollingFrame", frame)
-dropdownList.Position = UDim2.new(0, 10, 0, 80)
-dropdownList.Size = UDim2.new(1, -20, 0, 150)
+dropdownList.Position = UDim2.new(0, 10, 0, 115)
+dropdownList.Size = UDim2.new(1, -20, 0, 160)
 dropdownList.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
 dropdownList.BorderSizePixel = 0
 dropdownList.ScrollBarThickness = 6
 dropdownList.AutomaticCanvasSize = Enum.AutomaticSize.Y
 dropdownList.CanvasSize = UDim2.new(0, 0, 0, 0)
-dropdownList.Visible = true
 
 local layout = Instance.new("UIListLayout", dropdownList)
 layout.SortOrder = Enum.SortOrder.LayoutOrder
 layout.Padding = UDim.new(0, 2)
 
--- Tạo các nút chọn cây
-for _, name in ipairs(allPlantNames) do
-	local btn = Instance.new("TextButton", dropdownList)
+local plantButtons = {}
+
+-- Hàm tạo nút
+local function createButton(name)
+	local btn = Instance.new("TextButton")
 	btn.Size = UDim2.new(1, 0, 0, 25)
 	btn.Text = name
+	btn.Name = name
 	btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
 	btn.TextColor3 = Color3.new(1, 1, 1)
 	btn.Font = Enum.Font.Gotham
 	btn.TextSize = 13
+	btn.Parent = dropdownList
 
 	btn.MouseButton1Click:Connect(function()
 		local index = table.find(selectedPlantNames, name)
@@ -119,7 +133,22 @@ for _, name in ipairs(allPlantNames) do
 		end
 		updateSelectedLabel()
 	end)
+
+	plantButtons[name] = btn
 end
+
+-- Tạo toàn bộ nút ban đầu
+for _, name in ipairs(allPlantNames) do
+	createButton(name)
+end
+
+-- Lọc theo search
+searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+	local keyword = searchBox.Text:lower()
+	for name, button in pairs(plantButtons) do
+		button.Visible = keyword == "" or name:lower():find(keyword)
+	end
+end)
 
 -- Nút bật auto
 local autoBtn = Instance.new("TextButton", frame)
@@ -140,7 +169,7 @@ local function collectFruit(fruit)
 	if click then fireclickdetector(click) return end
 end
 
--- Tự động thu thập trái cây (liên tục, không delay giữa cây)
+-- Tự động thu thập
 task.spawn(function()
 	while true do
 		if collecting and #selectedPlantNames > 0 then
@@ -160,7 +189,7 @@ task.spawn(function()
 	end
 end)
 
--- Bật / tắt auto
+-- Toggle auto
 autoBtn.MouseButton1Click:Connect(function()
 	collecting = not collecting
 	autoBtn.Text = collecting and "⏸️ Dừng Auto" or "▶️ Bắt đầu Auto"
