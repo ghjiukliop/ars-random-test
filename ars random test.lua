@@ -13,55 +13,43 @@ local collecting = false
 
 --// Tìm farm của người chơi
 if farms then
-	for _, farm in ipairs(farms:GetChildren()) do
-		local owner = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Data") and farm.Important.Data:FindFirstChild("Owner")
-		if owner and owner.Value == player.Name then
-			playerFarm = farm
-			break
-		end
-	end
+    for _, farm in ipairs(farms:GetChildren()) do
+        local owner = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Data") and farm.Important.Data:FindFirstChild("Owner")
+        if owner and owner.Value == player.Name then
+            playerFarm = farm
+            break
+        end
+    end
 end
 
 if not playerFarm then
-	warn("❌ Không tìm thấy farm của người chơi.")
-	return
+    warn("❌ Không tìm thấy farm của người chơi.")
+    return
 end
 
 --// Lấy danh sách cây
 local plantsFolder = playerFarm.Important:FindFirstChild("Plants_Physical")
 if not plantsFolder then
-	warn("❌ Không tìm thấy Plants_Physical.")
-	return
+    warn("❌ Không tìm thấy Plants_Physical.")
+    return
 end
 
-task.spawn(function()
-    while collecting do
-        plantObjects = plantsFolder:GetChildren() -- Cập nhật danh sách cây
-
-        for _, plant in ipairs(plantObjects) do
-            if plant.Name == selectedPlantName then
-                local fruitFolder = plant:FindFirstChild("Fruits")
-                if fruitFolder then
-                    for _, fruit in ipairs(fruitFolder:GetChildren()) do
-                        collectFruit(fruit)
-                        task.wait(0.1) -- Giới hạn tốc độ thu thập
-                    end
-                end
-            end
+-- Cập nhật danh sách cây
+local function updatePlantObjects()
+    plantObjects = plantsFolder:GetChildren()
+    
+    -- Tạo danh sách tên cây duy nhất
+    uniquePlantNames = {}
+    local nameSet = {}
+    for _, plant in ipairs(plantObjects) do
+        if not nameSet[plant.Name] then
+            table.insert(uniquePlantNames, plant.Name)
+            nameSet[plant.Name] = true
         end
-
-        task.wait(1) -- Chờ giữa mỗi vòng thu thập toàn bộ
     end
-end)
-
---// Tạo danh sách tên cây duy nhất
-local nameSet = {}
-for _, plant in ipairs(plantObjects) do
-	if not nameSet[plant.Name] then
-		table.insert(uniquePlantNames, plant.Name)
-		nameSet[plant.Name] = true
-	end
 end
+
+updatePlantObjects() -- Gọi ngay để có dữ liệu
 
 --// Giao diện
 local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
@@ -110,24 +98,30 @@ layout.SortOrder = Enum.SortOrder.LayoutOrder
 layout.Padding = UDim.new(0, 2)
 
 -- Tạo nút cho từng loại cây (duy nhất)
-for _, name in ipairs(uniquePlantNames) do
-	local btn = Instance.new("TextButton", dropdownList)
-	btn.Size = UDim2.new(1, 0, 0, 25)
-	btn.Text = name
-	btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-	btn.TextColor3 = Color3.new(1, 1, 1)
-	btn.Font = Enum.Font.Gotham
-	btn.TextSize = 13
+local function updateDropdown()
+    dropdownList:ClearAllChildren()
+    
+    for _, name in ipairs(uniquePlantNames) do
+        local btn = Instance.new("TextButton", dropdownList)
+        btn.Size = UDim2.new(1, 0, 0, 25)
+        btn.Text = name
+        btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+        btn.TextColor3 = Color3.new(1, 1, 1)
+        btn.Font = Enum.Font.Gotham
+        btn.TextSize = 13
 
-	btn.MouseButton1Click:Connect(function()
-		selectedPlantName = name
-		dropdown.Text = "🌳 " .. selectedPlantName
-		dropdownList.Visible = false
-	end)
+        btn.MouseButton1Click:Connect(function()
+            selectedPlantName = name
+            dropdown.Text = "🌳 " .. selectedPlantName
+            dropdownList.Visible = false
+        end)
+    end
 end
 
+updateDropdown() -- Gọi ngay để có danh sách cây
+
 dropdown.MouseButton1Click:Connect(function()
-	dropdownList.Visible = not dropdownList.Visible
+    dropdownList.Visible = not dropdownList.Visible
 end)
 
 local autoBtn = Instance.new("TextButton", frame)
@@ -141,51 +135,37 @@ autoBtn.TextSize = 14
 
 --// Hàm thu thập
 local function collectFruit(fruit)
-	if not fruit:IsA("Model") then return end
-	local prompt = fruit:FindFirstChildWhichIsA("ProximityPrompt", true)
-	if prompt then fireproximityprompt(prompt) return end
-	local click = fruit:FindFirstChildWhichIsA("ClickDetector", true)
-	if click then fireclickdetector(click) return end
+    if not fruit:IsA("Model") then return end
+    local prompt = fruit:FindFirstChildWhichIsA("ProximityPrompt", true)
+    if prompt then fireproximityprompt(prompt) return end
+    local click = fruit:FindFirstChildWhichIsA("ClickDetector", true)
+    if click then fireclickdetector(click) return end
 end
 
---// Vòng lặp thu thập tự động
-RunService.RenderStepped:Connect(function()
-	if not collecting or not selectedPlantName then return end
-	for _, plant in ipairs(plantObjects) do
-		if plant.Name == selectedPlantName then
-			local fruitFolder = plant:FindFirstChild("Fruits")
-			if fruitFolder then
-				for _, fruit in ipairs(fruitFolder:GetChildren()) do
-					collectFruit(fruit)
-				end
-			end
-		end
-	end
-end)
-
---// Bật/tắt thu thập
 --// Bật/tắt thu thập
 autoBtn.MouseButton1Click:Connect(function()
-	collecting = not collecting
-	autoBtn.Text = collecting and "⏸️ Dừng Auto" or "▶️ Bắt đầu Auto"
-	autoBtn.BackgroundColor3 = collecting and Color3.fromRGB(200, 80, 80) or Color3.fromRGB(80, 130, 90)
+    collecting = not collecting
+    autoBtn.Text = collecting and "⏸️ Dừng Auto" or "▶️ Bắt đầu Auto"
+    autoBtn.BackgroundColor3 = collecting and Color3.fromRGB(200, 80, 80) or Color3.fromRGB(80, 130, 90)
 
-	if collecting then
-		task.spawn(function()
-			while collecting and selectedPlantName do
-				for _, plant in ipairs(plantObjects) do
-					if plant.Name == selectedPlantName then
-						local fruitFolder = plant:FindFirstChild("Fruits")
-						if fruitFolder then
-							for _, fruit in ipairs(fruitFolder:GetChildren()) do
-								collectFruit(fruit)
-								task.wait(0.1) -- giới hạn tốc độ
-							end
-						end
-					end
-				end
-				task.wait(1) -- chờ giữa mỗi vòng thu thập toàn bộ
-			end
-		end)
-	end
+    if collecting then
+        task.spawn(function()
+            while collecting and selectedPlantName do
+                updatePlantObjects() -- Luôn cập nhật danh sách cây
+
+                for _, plant in ipairs(plantObjects) do
+                    if plant.Name == selectedPlantName then
+                        local fruitFolder = plant:FindFirstChild("Fruits")
+                        if fruitFolder then
+                            for _, fruit in ipairs(fruitFolder:GetChildren()) do
+                                collectFruit(fruit)
+                                task.wait(0.1) -- giới hạn tốc độ
+                            end
+                        end
+                    end
+                end
+                task.wait(1) -- chờ giữa mỗi vòng thu thập toàn bộ
+            end
+        end)
+    end
 end)
