@@ -90,7 +90,6 @@ local layout = Instance.new("UIListLayout", dropdownList)
 layout.SortOrder = Enum.SortOrder.LayoutOrder
 layout.Padding = UDim.new(0, 2)
 
--- Tạo nút cho từng loại cây (duy nhất)
 for _, name in ipairs(uniquePlantNames) do
 	local btn = Instance.new("TextButton", dropdownList)
 	btn.Size = UDim2.new(1, 0, 0, 25)
@@ -129,7 +128,7 @@ local function collectFruit(fruit)
 	if click then fireclickdetector(click) return end
 end
 
---// Vòng lặp auto riêng biệt
+--// Thu thập liên tục không delay
 task.spawn(function()
 	while true do
 		if collecting and selectedPlantName then
@@ -139,19 +138,16 @@ task.spawn(function()
 					if fruitFolder then
 						for _, fruit in ipairs(fruitFolder:GetChildren()) do
 							collectFruit(fruit)
-							task.wait(0.1)
+							task.wait(0.05) -- thu nhanh, delay cực nhỏ giữa từng quả
 						end
 					end
 				end
 			end
-			task.wait(1)
-		else
-			task.wait(0.5)
 		end
+		task.wait(0.05) -- delay cực nhỏ giữa vòng quét
 	end
 end)
 
---// Bật/tắt thu thập
 autoBtn.MouseButton1Click:Connect(function()
 	collecting = not collecting
 	autoBtn.Text = collecting and "⏸️ Dừng Auto" or "▶️ Bắt đầu Auto"
