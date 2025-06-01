@@ -144,7 +144,7 @@ task.spawn(function()
 				end
 			end
 		end
-		task.wait(0.05) -- delay cực nhỏ giữa vòng quét
+		task.wait(0.01) -- delay cực nhỏ giữa vòng quét
 	end
 end)
 
