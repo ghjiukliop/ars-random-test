@@ -1,7 +1,7 @@
---// Dịch vụ
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
-local farms = workspace:FindFirstChild("Farm")
+
 
 --// Biến
 local playerFarm = nil
@@ -138,7 +138,7 @@ task.spawn(function()
 					if fruitFolder then
 						for _, fruit in ipairs(fruitFolder:GetChildren()) do
 							collectFruit(fruit)
-							task.wait(0.05) -- thu nhanh, delay cực nhỏ giữa từng quả
+							task.wait(0.0) -- thu nhanh, delay cực nhỏ giữa từng quả
 						end
 					end
 				end
