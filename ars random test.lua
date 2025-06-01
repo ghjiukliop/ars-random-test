@@ -1,12 +1,25 @@
+--// Dịch vụ
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
+local farms = workspace:FindFirstChild("Farm")
 
+--// Danh sách tên cây cố định
+local predefinedPlantNames = {
+	"Apple", "Avocado", "Banana", "Beanstalk", "Blood Banana", "Blueberry",
+	"Cacao", "Cactus", "Candy Blossom", "Celestiberry", "Cherry Blossom", "Cherry OLD",
+	"Coconut", "Corn", "Cranberry", "Crimson Vine", "Cursed Fruit", "Dragon Fruit",
+	"Durian", "Easter Egg", "Eggplant", "Ember Lily", "Foxglove", "Glowshroom",
+	"Grape", "Hive Fruit", "Lemon", "Lilac", "Lotus", "Mango", "Mint",
+	"Moon Blossom", "Moon Mango", "Moon Melon", "Moonflower", "Moonglow", "Nectarine",
+	"Papaya", "Passionfruit", "Peach", "Pear", "Pepper", "Pineapple", "Pink Lily",
+	"Purple Cabbage", "Purple Dahlia", "Raspberry", "Rose", "Soul Fruit", "Starfruit",
+	"Strawberry", "Succulent", "Sunflower", "Tomato", "Venus Fly Trap"
+}
 
 --// Biến
 local playerFarm = nil
 local plantObjects = {}
-local uniquePlantNames = {}
 local selectedPlantName = nil
 local collecting = false
 
@@ -34,15 +47,6 @@ if not plantsFolder then
 end
 
 plantObjects = plantsFolder:GetChildren()
-
---// Tạo danh sách tên cây duy nhất
-local nameSet = {}
-for _, plant in ipairs(plantObjects) do
-	if not nameSet[plant.Name] then
-		table.insert(uniquePlantNames, plant.Name)
-		nameSet[plant.Name] = true
-	end
-end
 
 --// Giao diện
 local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
@@ -90,7 +94,7 @@ local layout = Instance.new("UIListLayout", dropdownList)
 layout.SortOrder = Enum.SortOrder.LayoutOrder
 layout.Padding = UDim.new(0, 2)
 
-for _, name in ipairs(uniquePlantNames) do
+for _, name in ipairs(predefinedPlantNames) do
 	local btn = Instance.new("TextButton", dropdownList)
 	btn.Size = UDim2.new(1, 0, 0, 25)
 	btn.Text = name
@@ -128,26 +132,38 @@ local function collectFruit(fruit)
 	if click then fireclickdetector(click) return end
 end
 
---// Thu thập liên tục không delay
-task.spawn(function()
-	while true do
-		if collecting and selectedPlantName then
-			for _, plant in ipairs(plantObjects) do
-				if plant.Name == selectedPlantName then
-					local fruitFolder = plant:FindFirstChild("Fruits")
-					if fruitFolder then
-						for _, fruit in ipairs(fruitFolder:GetChildren()) do
-							collectFruit(fruit)
-							task.wait(0.0) -- thu nhanh, delay cực nhỏ giữa từng quả
+--// Vòng lặp auto riêng biệt
+local function startAutoCollectLoop()
+	task.spawn(function()
+		while true do
+			if collecting and selectedPlantName then
+				local found = false
+				for _, plant in ipairs(plantObjects) do
+					if plant.Name == selectedPlantName then
+						found = true
+						local fruitFolder = plant:FindFirstChild("Fruits")
+						if fruitFolder then
+							local fruits = fruitFolder:GetChildren()
+							for _, fruit in ipairs(fruits) do
+								collectFruit(fruit)
+								task.wait()
+							end
 						end
 					end
 				end
+				if not found then
+					print("❌ Không tìm thấy cây " .. selectedPlantName .. " trong farm của bạn.")
+				end
 			end
+			task.wait(0.5)
 		end
-		task.wait(0.01) -- delay cực nhỏ giữa vòng quét
-	end
-end)
+	end)
+end
 
+-- Bắt đầu vòng lặp thu thập
+startAutoCollectLoop()
+
+-- Nút bật/tắt
 autoBtn.MouseButton1Click:Connect(function()
 	collecting = not collecting
 	autoBtn.Text = collecting and "⏸️ Dừng Auto" or "▶️ Bắt đầu Auto"
