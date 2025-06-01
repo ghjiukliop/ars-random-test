@@ -1,6 +1,5 @@
 --// Dịch vụ
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 local farms = workspace:FindFirstChild("Farm")
 
@@ -130,44 +129,31 @@ local function collectFruit(fruit)
 	if click then fireclickdetector(click) return end
 end
 
---// Vòng lặp thu thập tự động
-RunService.RenderStepped:Connect(function()
-	if not collecting or not selectedPlantName then return end
-	for _, plant in ipairs(plantObjects) do
-		if plant.Name == selectedPlantName then
-			local fruitFolder = plant:FindFirstChild("Fruits")
-			if fruitFolder then
-				for _, fruit in ipairs(fruitFolder:GetChildren()) do
-					collectFruit(fruit)
+--// Vòng lặp auto riêng biệt
+task.spawn(function()
+	while true do
+		if collecting and selectedPlantName then
+			for _, plant in ipairs(plantObjects) do
+				if plant.Name == selectedPlantName then
+					local fruitFolder = plant:FindFirstChild("Fruits")
+					if fruitFolder then
+						for _, fruit in ipairs(fruitFolder:GetChildren()) do
+							collectFruit(fruit)
+							task.wait(0.1)
+						end
+					end
 				end
 			end
+			task.wait(1)
+		else
+			task.wait(0.5)
 		end
 	end
 end)
 
 --// Bật/tắt thu thập
---// Bật/tắt thu thập
 autoBtn.MouseButton1Click:Connect(function()
 	collecting = not collecting
 	autoBtn.Text = collecting and "⏸️ Dừng Auto" or "▶️ Bắt đầu Auto"
 	autoBtn.BackgroundColor3 = collecting and Color3.fromRGB(200, 80, 80) or Color3.fromRGB(80, 130, 90)
-
-	if collecting then
-		task.spawn(function()
-			while collecting and selectedPlantName do
-				for _, plant in ipairs(plantObjects) do
-					if plant.Name == selectedPlantName then
-						local fruitFolder = plant:FindFirstChild("Fruits")
-						if fruitFolder then
-							for _, fruit in ipairs(fruitFolder:GetChildren()) do
-								collectFruit(fruit)
-								task.wait(0.1) -- giới hạn tốc độ
-							end
-						end
-					end
-				end
-				task.wait(1) -- chờ giữa mỗi vòng thu thập toàn bộ
-			end
-		end)
-	end
 end)
