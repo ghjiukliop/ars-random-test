@@ -1,134 +1,191 @@
--- ✅ Auto Chase SL1 Enemy with Noclip (Updated Version)
-
+--// Dịch vụ
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-
 local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-local humanoid = character:WaitForChild("Humanoid")
+local farms = workspace:FindFirstChild("Farm")
 
-local enemiesFolder = workspace:WaitForChild("__Main"):WaitForChild("__Enemies"):WaitForChild("Client")
+--// Biến
+local playerFarm = nil
+local plantObjects = {}
+local uniquePlantNames = {}
+local selectedPlantName = nil
+local collecting = false
 
-local targetEnemy = nil
-local recentlyKilledEnemies = {}
+--// Tìm farm của người chơi
+if farms then
+	for _, farm in ipairs(farms:GetChildren()) do
+		local owner = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Data") and farm.Important.Data:FindFirstChild("Owner")
+		if owner and owner.Value == player.Name then
+			playerFarm = farm
+			break
+		end
+	end
+end
 
--- ⚙️ Tốc độ di chuyển
-local moveSpeed = 150
+if not playerFarm then
+	warn("❌ Không tìm thấy farm của người chơi.")
+	return
+end
 
--- 🧊 Noclip system
-local Noclip = nil
-local Clip = nil
+--// Lấy danh sách cây
+local plantsFolder = playerFarm.Important:FindFirstChild("Plants_Physical")
+if not plantsFolder then
+	warn("❌ Không tìm thấy Plants_Physical.")
+	return
+end
 
-function noclip()
-	Clip = false
-	local function Nocl()
-		if not Clip and player.Character ~= nil then
-			for _, v in pairs(player.Character:GetDescendants()) do
-				if v:IsA("BasePart") and v.CanCollide then
-					v.CanCollide = false
+task.spawn(function()
+    while collecting do
+        plantObjects = plantsFolder:GetChildren() -- Cập nhật danh sách cây
+
+        for _, plant in ipairs(plantObjects) do
+            if plant.Name == selectedPlantName then
+                local fruitFolder = plant:FindFirstChild("Fruits")
+                if fruitFolder then
+                    for _, fruit in ipairs(fruitFolder:GetChildren()) do
+                        collectFruit(fruit)
+                        task.wait(0.1) -- Giới hạn tốc độ thu thập
+                    end
+                end
+            end
+        end
+
+        task.wait(1) -- Chờ giữa mỗi vòng thu thập toàn bộ
+    end
+end)
+
+--// Tạo danh sách tên cây duy nhất
+local nameSet = {}
+for _, plant in ipairs(plantObjects) do
+	if not nameSet[plant.Name] then
+		table.insert(uniquePlantNames, plant.Name)
+		nameSet[plant.Name] = true
+	end
+end
+
+--// Giao diện
+local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+screenGui.Name = "FruitCollectorGUI"
+
+local frame = Instance.new("Frame", screenGui)
+frame.Size = UDim2.new(0, 250, 0, 180)
+frame.Position = UDim2.new(0, 20, 0, 150)
+frame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+frame.BorderSizePixel = 0
+frame.BackgroundTransparency = 0.05
+frame.Active = true
+frame.Draggable = true
+
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1, 0, 0, 30)
+title.Position = UDim2.new(0, 0, 0, 0)
+title.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+title.Text = "🌿 Auto Fruit Collector"
+title.TextColor3 = Color3.new(1, 1, 1)
+title.Font = Enum.Font.Gotham
+title.TextSize = 16
+title.BorderSizePixel = 0
+
+local dropdown = Instance.new("TextButton", frame)
+dropdown.Size = UDim2.new(1, -20, 0, 30)
+dropdown.Position = UDim2.new(0, 10, 0, 40)
+dropdown.Text = "🔽 Chọn loại cây"
+dropdown.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+dropdown.TextColor3 = Color3.new(1, 1, 1)
+dropdown.Font = Enum.Font.Gotham
+dropdown.TextSize = 14
+
+local dropdownList = Instance.new("ScrollingFrame", frame)
+dropdownList.Size = UDim2.new(1, -20, 0, 80)
+dropdownList.Position = UDim2.new(0, 10, 0, 75)
+dropdownList.Visible = false
+dropdownList.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+dropdownList.BorderSizePixel = 0
+dropdownList.ScrollBarThickness = 6
+dropdownList.AutomaticCanvasSize = Enum.AutomaticSize.Y
+dropdownList.CanvasSize = UDim2.new(0, 0, 0, 0)
+
+local layout = Instance.new("UIListLayout", dropdownList)
+layout.SortOrder = Enum.SortOrder.LayoutOrder
+layout.Padding = UDim.new(0, 2)
+
+-- Tạo nút cho từng loại cây (duy nhất)
+for _, name in ipairs(uniquePlantNames) do
+	local btn = Instance.new("TextButton", dropdownList)
+	btn.Size = UDim2.new(1, 0, 0, 25)
+	btn.Text = name
+	btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+	btn.TextColor3 = Color3.new(1, 1, 1)
+	btn.Font = Enum.Font.Gotham
+	btn.TextSize = 13
+
+	btn.MouseButton1Click:Connect(function()
+		selectedPlantName = name
+		dropdown.Text = "🌳 " .. selectedPlantName
+		dropdownList.Visible = false
+	end)
+end
+
+dropdown.MouseButton1Click:Connect(function()
+	dropdownList.Visible = not dropdownList.Visible
+end)
+
+local autoBtn = Instance.new("TextButton", frame)
+autoBtn.Size = UDim2.new(1, -20, 0, 30)
+autoBtn.Position = UDim2.new(0, 10, 1, -40)
+autoBtn.BackgroundColor3 = Color3.fromRGB(80, 130, 90)
+autoBtn.Text = "▶️ Bắt đầu Auto"
+autoBtn.TextColor3 = Color3.new(1, 1, 1)
+autoBtn.Font = Enum.Font.Gotham
+autoBtn.TextSize = 14
+
+--// Hàm thu thập
+local function collectFruit(fruit)
+	if not fruit:IsA("Model") then return end
+	local prompt = fruit:FindFirstChildWhichIsA("ProximityPrompt", true)
+	if prompt then fireproximityprompt(prompt) return end
+	local click = fruit:FindFirstChildWhichIsA("ClickDetector", true)
+	if click then fireclickdetector(click) return end
+end
+
+--// Vòng lặp thu thập tự động
+RunService.RenderStepped:Connect(function()
+	if not collecting or not selectedPlantName then return end
+	for _, plant in ipairs(plantObjects) do
+		if plant.Name == selectedPlantName then
+			local fruitFolder = plant:FindFirstChild("Fruits")
+			if fruitFolder then
+				for _, fruit in ipairs(fruitFolder:GetChildren()) do
+					collectFruit(fruit)
 				end
 			end
 		end
-		wait(0.21)
 	end
-	Noclip = RunService.Stepped:Connect(Nocl)
-end
-
-function clip()
-	if Noclip then Noclip:Disconnect() end
-	Clip = true
-end
-
--- 🚫 Tắt noclip khi huỷ nhân vật
-character.Destroying:Connect(function()
-	clip()
 end)
 
--- Lấy máu từ HealthBar GUI
-local function getEnemyHealthFromGUI(enemy)
-	if enemy and enemy:FindFirstChild("HealthBar") then
-		local amountLabel = enemy.HealthBar:FindFirstChild("Main")
-			and enemy.HealthBar.Main:FindFirstChild("Bar")
-			and enemy.HealthBar.Main.Bar:FindFirstChild("Amount")
+--// Bật/tắt thu thập
+--// Bật/tắt thu thập
+autoBtn.MouseButton1Click:Connect(function()
+	collecting = not collecting
+	autoBtn.Text = collecting and "⏸️ Dừng Auto" or "▶️ Bắt đầu Auto"
+	autoBtn.BackgroundColor3 = collecting and Color3.fromRGB(200, 80, 80) or Color3.fromRGB(80, 130, 90)
 
-		if amountLabel and amountLabel:IsA("TextLabel") then
-			local text = amountLabel.Text
-			local value = tonumber(text:match("%d+"))
-			return value or 0
-		end
-	end
-	return 0
-end
-
--- Tìm enemy gần nhất có ID = SL1
-local function findNearestSL1Enemy()
-	local nearestEnemy = nil
-	local minDistance = math.huge
-
-	for _, enemy in ipairs(enemiesFolder:GetChildren()) do
-		local attributes = enemy:GetAttributes()
-		local isRecentlyKilled = table.find(recentlyKilledEnemies, enemy) ~= nil
-
-		if attributes and attributes["ID"] == "SL1" and enemy:FindFirstChild("Head") and not isRecentlyKilled then
-			local distance = (humanoidRootPart.Position - enemy.Head.Position).Magnitude
-			if distance < minDistance then
-				minDistance = distance
-				nearestEnemy = enemy
+	if collecting then
+		task.spawn(function()
+			while collecting and selectedPlantName do
+				for _, plant in ipairs(plantObjects) do
+					if plant.Name == selectedPlantName then
+						local fruitFolder = plant:FindFirstChild("Fruits")
+						if fruitFolder then
+							for _, fruit in ipairs(fruitFolder:GetChildren()) do
+								collectFruit(fruit)
+								task.wait(0.1) -- giới hạn tốc độ
+							end
+						end
+					end
+				end
+				task.wait(1) -- chờ giữa mỗi vòng thu thập toàn bộ
 			end
-		end
-	end
-	return nearestEnemy
-end
-
--- Bắt đầu noclip
-noclip()
-
--- Theo dõi mục tiêu
-local checkTargetInterval = 0.5
-local lastCheckTime = 0
-
-RunService.Heartbeat:Connect(function(deltaTime)
-	lastCheckTime = lastCheckTime + deltaTime
-
-	-- Dọn danh sách kẻ địch đã chết
-	for i = #recentlyKilledEnemies, 1, -1 do
-		if not recentlyKilledEnemies[i]:IsDescendantOf(game) then
-			table.remove(recentlyKilledEnemies, i)
-		end
-	end
-
-	if lastCheckTime >= checkTargetInterval then
-		lastCheckTime = 0
-
-		if not targetEnemy then
-			local nearest = findNearestSL1Enemy()
-			if nearest then
-				targetEnemy = nearest
-				print("🎯 Tìm thấy mục tiêu:", targetEnemy.Name)
-			else
-				print("❌ Không tìm thấy enemy SL1.")
-				clip()
-			end
-		elseif getEnemyHealthFromGUI(targetEnemy) <= 0 then
-			print("☠️ Mục tiêu", targetEnemy.Name, "đã chết.")
-			table.insert(recentlyKilledEnemies, targetEnemy)
-			targetEnemy = nil
-		end
-	end
-
-	-- Nếu đang có mục tiêu, di chuyển vật lý tới đầu kẻ địch
-	if targetEnemy and targetEnemy:FindFirstChild("Head") then
-		local enemyHead = targetEnemy.Head
-		local direction = (enemyHead.Position - humanoidRootPart.Position).Unit
-		local distance = (enemyHead.Position - humanoidRootPart.Position).Magnitude
-
-		if distance > 3 then
-			humanoidRootPart.Velocity = direction * moveSpeed
-		else
-			humanoidRootPart.Velocity = Vector3.zero
-		end
-
-		print("❤️ Đang theo dõi:", targetEnemy.Name, " - HP:", getEnemyHealthFromGUI(targetEnemy))
+		end)
 	end
 end)
